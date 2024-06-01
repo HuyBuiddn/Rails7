@@ -71,8 +71,6 @@ Lệnh này sẽ chạy rails server với các gem được chỉ định trong
 
 Điều này sẽ tạo ra một file binstub bin/rails. Bây giờ, thay vì chạy bundle exec rails server, bạn chỉ cần chạy: bin/rails server
 
-
-
 RSpec and Haml
 
 là 2 gem cần thiết cài đặt khi bắt đầu mỗi dự án.
@@ -80,8 +78,6 @@ là 2 gem cần thiết cài đặt khi bắt đầu mỗi dự án.
 RSpec là một framework kiểm thử phần mềm (testing framework). RSpec sử dụng một ngôn ngữ gần với tiếng Anh để mô tả các kiểm thử, giúp làm cho mã kiểm thử dễ đọc và dễ hiểu. RSpec tập trung vào việc kiểm thử hành vi của ứng dụng từ góc độ của người dùng cuối. Điều này giúp đảm bảo rằng ứng dụng hoạt động đúng theo các kỳ vọng của người dùng.
 
 Haml là một ngôn ngữ đánh dấu cung cấp một cú pháp ngắn gọn hơn so với HTML truyền thống, giúp giảm số lượng ký tự cần viết và làm cho mã nguồn trở nên dễ đọc hơn.
-
-
 
 Running a Rails application
 
@@ -139,20 +135,14 @@ Khi ứng dụng chạy trong môi trường Test sẽ tải gem rails và rspec
 
 định nghĩa một mô-đun TimeAndExpenses chứa lớp Application, kế thừa từ Rails::Application. Trong lớp Application, phương thức config.load_defaults 7.0 được gọi để thiết lập các giá trị mặc định cho phiên bản Rails 7.0. Tạo ra một module cụ thể cho ứng dụng của bạn giúp tạo ra nền tảng cho việc chạy nhiều ứng dụng Rails trong cùng một quá trình Ruby
 
-
-
 Default Initializers
 
 "initializers" là các file Ruby được đặt trong thư mục config/initializers. Chúng chứa các cấu hình và mã khởi tạo cần thiết cho ứng dụng. Rails cung cấp một số initializers mặc định khi bạn tạo một ứng dụng mới
-
-
 
 Other Common Settings
 
 có thể thêm các thiết lập khác trong config/application.rb hoặc initializer
 nếu muốn đặt trong initializer phải tiền tố các cấu hình với Rails.application.
-
-
 
 Zeitwerk
 
@@ -173,51 +163,74 @@ end
 
 thành admin/user.rb
 
-
-
 Development Mode
 
 Môi trường lập trình với các tính năng nổi bât đc rail cung cấp như Caching,
 
 Automatic Class Reloading, Error Reports, Server Timing , Active Storage Settings
 
-
-
 Test Mode
 
 cung cấp các công cụ và framework testing để bạn có thể viết và chạy các test case cho mọi phần của ứng dụng một cách tự động.
-
-
 
 Production Mode
 
 là môi trường được sử dụng khi ứng dụng của bạn đã được triển khai và đang chạy trên một máy chủ hoặc môi trường sản xuất thực tế.
 
-
-
 Configuring Application Secrets
 
 chạy lệnh rails secret để tạo khoá bảo mật mới rồi chạy rails credentials:edit để chỉnh sửa credentials và thêm khoá bảo mật mới.
-
-
 
 Configuring a Database
 
 config/database.yml là tệp chỉ định tất cả các cài đặt cấu hình cần thiết bởi Active Record để kết nối đến cơ sở dữ liệu.
 
-
-
 Logging
 
 là quá trình ghi lại các sự kiện và thông điệp trong quá trình chạy ứng dụng. Logger trong Rails có thể được sử dụng để ghi lại các sự kiện với các mức độ nghiêm trọng khác nhau, từ debug đến fatal. Các thông điệp log có thể cung cấp thông tin hữu ích cho việc gỡ lỗi, theo dõi hiệu suất ứng dụng, hoặc giúp phát hiện và xử lý các vấn đề. Thông thường, các thông điệp log sẽ được ghi vào các tệp log tương ứng với mỗi môi trường, chẳng hạn như development, test, và production. Điều này giúp quản lý và phân tích log dễ dàng hơn.
-
-
 
 Default Gems
 
 các gem mặc định khi xây dựng 1 ứng dụng Rails.
 
-
 Rack
 
 Rack là một giao diện trung gian (middleware interface) trong Ruby được sử dụng để xây dựng các ứng dụng web. Nó cung cấp một cách tiêu chuẩn để xử lý các yêu cầu HTTP và tạo ra các phản hồi tương ứng. Mỗi ứng dụng Rack là một hàm Ruby nhận một đối tượng "env" chứa thông tin về yêu cầu HTTP và trả về một mảng chứa ba phần tử: mã trạng thái HTTP, các tiêu đề HTTP và nội dung phản hồi. Các ứng dụng Rack có thể được xếp chồng lên nhau để tạo thành các ứng dụng lớn hơn, mỗi ứng dụng đảm nhận một phần của xử lý yêu cầu.
+
+Different between eagerloading and autoloading
+
+Eager loading và auto loading là hai khái niệm liên quan đến cách thức nạp dữ liệu trong các framework phát triển ứng dụng, đặc biệt là trong các framework như Ruby on Rails.
+
+ Eager Loading:
+
+  - Khái niệm: Eager loading là kỹ thuật nạp trước dữ liệu liên quan từ database trong một lần truy vấn duy nhất.
+  - Cách thức: Khi bạn thực hiện eager loading, bạn sử dụng các phương pháp như includes trong Rails để nạp trước các dữ liệu liên quan.
+  - Lợi ích: Giảm số lượng truy vấn đến database (N+1 query problem), giúp tăng hiệu suất khi cần truy xuất dữ liệu liên quan
+  - vi du:  @posts = Post.includes(:comments)
+
+     Truy vấn trên sẽ nạp tất cả các bài viết cùng với các bình luận liên quan trong một truy vấn duy nhất.
+
+ Auto Loading:
+
+  - Khái niệm: Auto loading là kỹ thuật tự động nạp các file mã nguồn khi chúng được yêu cầu lần đầu tiên trong quá trình runtime.
+  - Cách thức: Thường được thiết lập trong môi trường phát triển và sản xuất để tự động tìm kiếm và nạp các file khi chúng được gọi.
+  - Lợi ích: Giảm thời gian khởi động ứng dụng, vì các file không cần được nạp trước khi cần thiết.
+  - Ví dụ: Khi bạn gọi một class trong Rails mà class đó chưa được nạp, auto loading sẽ tự động tìm và nạp file chứa class đó.
+
+    class User < ApplicationRecord
+
+     # Some code
+
+    end
+
+    Nếu bạn gọi User lần đầu tiên, Rails sẽ tự động nạp file user.rb.
+
+ Tóm lại:
+
+  - Eager Loading: Nạp dữ liệu liên quan từ database trong một truy vấn duy nhất để tăng hiệu suất khi xử lý dữ liệu liên quan.
+
+  - Auto Loading: Tự động nạp các file mã nguồn khi chúng được yêu cầu trong quá trình runtime, giúp giảm thời gian khởi động ứng dụng.
+
+  Cả hai khái niệm này đều nhằm mục đích tối ưu hóa hiệu suất, nhưng chúng được áp dụng trong các bối cảnh khác nhau: eager loading tập trung vào việc tối ưu hóa truy vấn database, trong khi auto loading tập trung vào việc quản lý mã nguồn trong quá trình runtime.
+
+
