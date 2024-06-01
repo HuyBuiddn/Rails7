@@ -115,12 +115,9 @@ require 'rails/all'
 
 module TimeAndExpenses
 class Application < Rails::Application
-# Initialize configuration defaults for originally generated Rails version.
+
 config.load_defaults 7.0
-#  Settings in config/environments/* take precedence over those specified      here.
-# Application configuration can go into files in config/initializers
-# -- all .rb files in that directory are automatically loaded after loading
-# the framework and any gems in your application.
+
 end
 end
 
@@ -218,7 +215,7 @@ là quá trình ghi lại các sự kiện và thông điệp trong quá trình 
 
 Default Gems
 
-các gem mặc định khi xây dựng 1 ứng dụng Rails
+các gem mặc định khi xây dựng 1 ứng dụng Rails.
 
 
 
