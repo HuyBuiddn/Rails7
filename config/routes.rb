@@ -7,10 +7,13 @@ Rails.application.routes.draw do
 
   # Defines the root path route ("/")
   # root "posts#index"
+<<<<<<< HEAD
 
 
   #test rails routes
 
   extend test_routes
 
+=======
+>>>>>>> 4010ccd (1st commit)
 end
