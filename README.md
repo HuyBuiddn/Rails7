@@ -167,8 +167,7 @@ Defining Defaults
 
   get "photos/:id", to: "photos#show", defaults: { format: "jpg" }
 
- Trong ví dụ trên, Rails sẽ khớp http://example.com/photos/12 với hành động show của PhotosController, và thiết lập params[:format] thành "jpg".
- Vì lý do bảo mật, bạn không thể ghi đè lên các giá trị mặc định bằng cách thay đổi các giá trị trong đối tượng params.
+ Trong ví dụ trên, Rails sẽ khớp http://example.com/photos/12 với hành động show của PhotosController, và thiết lập params[:format] thành "jpg". Vì lý do bảo mật, bạn không thể ghi đè lên các giá trị mặc định bằng cách thay đổi các giá trị trong đối tượng params.
 
 Redirect Routes
  phương thức redirect: chuyển hướng của tuyến.
@@ -240,9 +239,9 @@ Globbing Key-Value Pairs
 
   def query
    @items = Item.where(Hash[*params[:specs].split("/")])
-  if @items.empty?
-   flash[:error] = "Can't find items with those properties"
-  end
+   if @items.empty?
+    flash[:error] = "Can't find items with those properties"
+   end
    render :index
   end
 
@@ -251,3 +250,230 @@ Globbing Key-Value Pairs
  - Hash[*key_value_pairs]: Chuyển đổi mảng các cặp khóa-giá trị xen kẽ thành một hash có thể sử dụng như các điều kiện trong một truy vấn ActiveRecord.
  - Item.where(conditions): Thực hiện một truy vấn trên mô hình Item với các điều kiện đã chỉ định.
  - Render: Tùy thuộc vào kết quả truy vấn, bạn có thể đặt thông báo flash (flash[:error]) nếu không có sản phẩm nào khớp với tiêu chí và sau đó render view phù hợp (index hoặc một view khác)
+
+Named Routes
+Creating a Named Route
+ Đặt tên cho 1 Route bằng cách sử dụng tham số tùy chọn :as Ví dụ:
+  get "help" => "help#index", as: "help"
+
+ và tạo đường dẫn 
+
+  link_to "Help", help_path
+
+ ví dụ
+
+  link_to "Auction of #{item.name}",
+  controller: "items",
+  action: "show",
+  id: item.id
+
+ với route 
+
+  get "item/:id" => "items#show"
+
+ có thể rút ngắn định nghĩa trong file route.rb thành 
+
+  get "item/:id" => "items#show", as: "item
+
+ và trong file view thành 
+
+  link_to "Auction of #{item.name}", item_path(id: item.id)
+
+ Có thể rút gọn ngắn hơn nữa bằng cách sử dụng phương thức to_param để Rails tự động lấy id.
+
+ Mặc định, Rails sử dụng ID của đối tượng làm tham số mặc định trong URL. Ví dụ, nếu bạn có một đối tượng User với ID là 1, URL mặc định sẽ là /users/1. Tuy nhiên, sử dụng to_param, bạn có thể định nghĩa một cách tùy biến hóa cách biểu diễn của đối tượng này trong URL. Thay vì sử dụng ID, bạn có thể sử dụng bất kỳ trường nào khác trong model, chẳng hạn như slug, name, title,... 
+
+ Ví dụ:
+ Giả sử bạn có một model User trong Rails và bạn muốn sử dụng username của người dùng thay vì ID trong URL:
+
+  class User < ApplicationRecord
+   def to_param
+    username
+   end
+  end
+
+ Khi bạn sử dụng phương thức to_param như trên, mỗi khi bạn truy cập đến một đường dẫn sử dụng đối tượng User, ví dụ như user_path(user), Rails sẽ sử dụng giá trị của username của đối tượng để xây dựng URL thay vì ID. Ví dụ, nếu username của người dùng là "john_doe", URL sẽ trở thành /users/john_doe thay vì /users/1.
+
+
+ Như vậy ta chỉ cần:
+
+ link_to "Auction of #{item.name}", item_path(item)
+
+ Nguyên tắc này cũng sử dụng kết hợp vs khoá phân đoạn 
+
+ get "auction/:auction_id/item/:id" => "items#show", as: "item"
+
+ link_to "Auction of #{item.name}", item_path(auction, item)
+
+Direct Routes
+
+ Trong Rails routing, phương thức directcung cấp cách để tạo các trợ giúp URL tùy chỉnh liên kết đến các URL tĩnh. Điềunày rất hữu ích khi bạn có các URL không thay đổi và muốn định nghĩa chúng một lần và sử dụng trong toàn bộ ứng dụng của bạn.
+
+ Tạo Direct Route
+ Dưới đây là cách bạn có thể sử dụng phương thức direct để định nghĩa trợ giúp URL tùy chỉnh:
+
+ direct(:apple) { "http://www.apple.com" } 
+
+ Trong ví dụ này:
+  direct(:apple)
+     - tạo ra một trợ giúp URL tùy chỉnh có tên là apple_url.
+     - Khối { "http://www.apple.com" } xác định URL tĩnh mà apple_url sẽ phân giải tới.
+
+Scoping Routing Rules
+
+ Rails cung cấp nhiều cách để nhóm các quy tắc routing liên quan lại với nhau một cách ngắn gọn và hiệu quả. Các cách này dựa trên việc sử dụng phương thức scope và các shortcut của nó. Điều này giúp cho file routes.rb của bạn trở nên sạch sẽ và dễ quản lý hơn.
+
+ Ví dụ:
+
+  get "auctions/new" => "auctions#new"
+  get "auctions/edit/:id" => "auctions#edit"
+  post "auctions/pause/:id" => "auctions#pause"
+
+ sử dụng phương thức scope để làm cho file routes.rb ngắn gọn hơn:
+
+  scope controller: :auctions do
+   get "auctions/new" => :new
+   get "auctions/edit/:id" => :edit
+   post "auctions/pause/:id" => :pause
+  end
+
+ Trong ví dụ trên:
+
+  scope controller: :auctions chỉ định rằng tất cả các route bên trong block này sẽ
+     sử dụng controller auctions.
+  Các hành động (new, edit, pause) được viết gọn hơn mà không cần chỉ định lại tên
+     controller.
+
+ them tham số :path vào scope: để ngắn gọn hơn nữa
+
+  scope path: "/auctions", controller: :auctions do
+   get "new" => :new
+   get "edit/:id" => :edit
+   post "pause/:id" => :pause
+  end
+
+ Việc sử dụng scope trong Rails là một cách hiệu quả để quản lý và tổ chức các quy tắc routing trong ứng dụng của bạn. Bằng cách nhóm các route liên quan lại với nhau và sử dụng các tham số như :controller và :path, bạn có thể làm cho file routes.rb trở nên ngắn gọn, dễ đọc và dễ bảo trì hơn.
+
+Controller
+ Có thể viết gọn hơn nữa từ 
+
+  scope controller: :auctions do
+
+ thành 
+  scope :auctions do 
+
+ hoặc 
+  controller :auctions do
+
+Path Prefix
+
+ Phương thức scope chấp nhận tùy chọn :path hoặc có thể diễn giải một chuỗi (string) là đối số đầu tiên để biểu thị tiền tố đường dẫn.
+
+  scope path: "/auctions" do
+   get "new" => "auctions#new"
+   get "edit/:id" => "auctions#edit"
+   post "pause/:id" => "auctions#pause"
+  end
+
+ Đều sử dụng path nhưng ở ví dụ trên đã chỉ định sử dụng controller AuctionsController nên k cần phải chỉ định controller cho mỗi route nữa
+
+Name Prefix
+
+ Tùy chọn :as cho phép bạn thêm một tiền tố vào tên của các phương thức trợ giúp URL. Điều này rất hữu ích khi bạn cần phân biệt các nhóm đường dẫn khác nhau trong ứng dụng của mình. Ví
+ dụ sau đây minh họa cách sử dụng :as để tạo ra các phương thức trợ giúp URL với tiền tố admin:
+
+  scope :auctions, as: 'admin' do
+   get 'new' => :new, as: 'new_auction'
+  end
+
+ Giúp phân biệt các nhóm đường dẫn khác nhau trong ứng dụng.
+
+Namespaces
+
+ Phương thức namespace trong Rails là một cú pháp ngắn gọn kết hợp các thiết lập module, tên tiền tố (name prefix) và tiền tố đường dẫn (path prefix) vào một khai báo duy nhất. Điều này giúp tổ chức các quy tắc routing một cách dễ dàng và gọn gàng hơn.
+
+  namespace :auctions do
+   get 'new' => :new
+   get 'edit/:id' => :edit
+   post 'pause/:id' => :pause
+  end
+
+ Khi sử dụng namespace, các quy tắc URL sẽ được tổ chức theo các cách sau:
+  Module:
+     Các hành động được định nghĩa trong một module có tên tương ứng với
+     namespace. Trong ví dụ trên, các hành động sẽ nằm trong module Auctions.
+  Name Prefix:
+     Các phương thức trợ giúp URL sẽ có tiền tố tương ứng với namespace. Ví dụ:
+     new_auction_url,
+     edit_auction_url,
+     pause_auction_url.
+  Path Prefix:
+     Các URL sẽ có tiền tố đường dẫn tương ứng với namespace. Ví dụ: /auctions/new,
+     /auctions/edit/:id,
+     /auctions/pause/:id.
+
+ Như vậy sự khác biệt giữa scope và namespaces là scope có thể tuỳ chỉnh 3 tham số module, path và as
+
+Bundling Constraints
+
+ Có thể thêm ràng buộc vào phương thức scope. Trường hợp dưới đây ràng buộc cho toàn bộ tuyến
+
+  scope controller: :auctions, constraints: {:id =>/\d+/} do
+   get "edit/:id" => :edit
+   post "pause/:id" => :pause
+  end
+
+ hoặc trường hợp một tập hợp các quy tắc trong một scope cụ thể cần các ràng buộc.
+
+  scope path: "/auctions", controller: :auctions do
+   get "new" => :new
+   constraints id: /\d+/ do
+    get "edit/:id" => :edit
+    post "pause/:id" => :pause
+   end
+  end
+
+ Để tăng tính tái sử dụng theo mô-đun, bạn có thể cung cấp phương thức constraints với một đối tượng có phương thức matches?. Đây là ví dụ về cách làm điều này:
+ 
+  class DateFormatConstraint
+   def self.matches?(request)
+    request.params[:date] =~ /\A\d{4}-\d\d-\d\d\z/ 
+   end  
+   # YYYY-MM-DD 
+  end
+
+  # in routes.rb
+  constraints(DateFormatConstraint) do
+   get 'since/:date' => :since
+  end
+
+ Trong ví dụ này, DateFormatConstraint kiểm tra xem tham số :date có định dạng đúng YYYY-MM-DD hay không. Nếu người dùng nhập một tham số date không đúng định dạng qua URL, Rails sẽ phản hồi với mã trạng thái 404 thay vì gây ra một ngoại lệ.
+
+Listing Routes
+
+ Rails cung cấp một tiện ích hữu ích để liệt kê các tuyến đường có trong ứng dụng bằng cách gõ rails routes trong thư mục ứng dụng của bạn. Dưới đây là ví dụ về đầu ra của một tập tin routes.rb chứa một quy tắc duy nhất resources :products:
+
+ Đầu ra là một bảng có bốn cột:
+  Prefix:
+     Tên của tuyến đường (nếu có).
+  Verb:
+     Phương thức HTTP được sử dụng (GET, POST, PATCH, PUT, DELETE).
+  URI Pattern:
+     Chuỗi ánh xạ URL.
+  Controller#Action:
+     Bộ điều khiển và phương thức hành động mà tuyến đường ánh xạ tới, cộng với
+     các ràng buộc đã được định nghĩa trên khóa đoạn của tuyến đường (nếu có).
+
+ Tùy Chọn Liệt Kê Theo Bộ Điều Khiển
+
+ Lệnh rails routes còn hỗ trợ kiểm tra một bộ điều khiển cụ thể bằng cách sử dụng tùy chọn -c. Ví dụ, để chỉ liệt kê các tuyến đường liên quan đến ProductsController, bạn có thể sử dụng lệnh sau:
+
+  $ rails routes -c products
+
+  Ví dụ: 
+  Rails.application.routes.draw do
+   resources :products
+  end
+
+  Giải thích chi tiết
+  Khi bạn định nghĩa resources :products, Rails sẽ tự động tạo ra một tập hợp các tuyến đường chuẩn để xử lý các hành động CRUD (Create, Read, Update, Delete) cho tài nguyên products.
