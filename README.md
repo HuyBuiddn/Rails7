@@ -229,39 +229,36 @@ cho phép bạn xác định các tuyến đường linh hoạt hơn bằng các
 diện (wildcard) để phù hợp với nhiều URL khác nhau cùng một lúc. Ví dụ như liệt kê các URL
 của các sản phẩm từ gỗ
 Globbing Key-Value Pairs
-Ví dụ về Kiểu URI
-Giả sử bạn thiết kế một kiểu URI như sau:
-http://localhost:3000/items/q/field1/value1/field2/value2/...
-Mẫu này cho phép người dùng yêu cầu trả về danh sách sản phẩm dựa trên các trường và giá trị
-tương ứng của chúng.
-Ví dụ, URL như http://localhost:3000/items/q/year/1939/material/wood có thể tạo ra
-danh sách các mặt hàng được làm từ gỗ trong năm 1939.
-Ta có thể triển khai như sau:
-Định nghĩa Tuyến Đường
-Để xử lý cấu trúc khóa-giá trị động này trong các tuyến đường của Rails của bạn, bạn sẽ định
-nghĩa một tuyến đường sử dụng kỹ thuật globbing:
-get "items/q/*specs", controller: "items", action: "query"
-Ở đây:
-  "items/q/*specs" là mẫu URL trong đó *specs chứa tất cả các đoạn sau "items/q/".
-  "items" là tên của controller.
-  "query" là tên của action trong ItemsController.
-Triển Khai Hành Động Trong Controller
-Tiếp theo, bạn cần triển khai hành động query trong ItemsController để xử lý các tham số và
-thực hiện truy vấn:
-def query
-@items = Item.where(Hash[*params[:specs].split("/")])
-if @items.empty?
-flash[:error] = "Can't find items with those properties"
-end
-render :index
-end
-Giải thích
-  params[:specs]: Chứa các đoạn globbing từ URL, được tách thành mảng các cặp khóa-giá trị
-(field1/value1/field2/value2/...).
-  Hash[*key_value_pairs]: Chuyển đổi mảng các cặp khóa-giá trị xen kẽ thành một hash có
-thể sử dụng như các điều kiện trong một truy vấn ActiveRecord.
-  Item.where(conditions): Thực hiện một truy vấn trên mô hình Item với các điều kiện đã
-chỉ định.
-  Render: Tùy thuộc vào kết quả truy vấn, bạn có thể đặt thông báo flash (flash[:error]) nếu
- không có sản phẩm nào khớp với tiêu chí và sau đó render view phù hợp (index hoặc một view
- khác)
+ Ví dụ về Kiểu URI
+  Giả sử bạn thiết kế một kiểu URI như sau:
+   http://localhost:3000/items/q/field1/value1/field2/value2/...
+   Mẫu này cho phép người dùng yêu cầu trả về danh sách sản phẩm dựa trên các trường và giá trị tương ứng của chúng.
+
+   Ví dụ, URL như http://localhost:3000/items/q/year/1939/material/wood có thể tạo ra danh sách các mặt hàng được làm từ gỗ trong năm 1939.
+
+ Ta có thể triển khai như sau:
+ Định nghĩa Tuyến Đường
+ Để xử lý cấu trúc khóa-giá trị động này trong các tuyến đường của Rails của bạn, bạn sẽ định nghĩa một tuyến đường sử dụng kỹ thuật globbing:
+
+  get "items/q/*specs", controller: "items", action: "query"
+  Ở đây:
+   - "items/q/*specs" là mẫu URL trong đó *specs chứa tất cả các đoạn sau "items/q/".
+   - "items" là tên của controller.
+   - "query" là tên của action trong ItemsController.
+
+ Triển Khai Hành Động Trong Controller
+ Tiếp theo, bạn cần triển khai hành động query trong ItemsController để xử lý các tham số và thực hiện truy vấn:
+
+  def query
+   @items = Item.where(Hash[*params[:specs].split("/")])
+  if @items.empty?
+   flash[:error] = "Can't find items with those properties"
+  end
+   render :index
+  end
+
+ Giải thích
+ - params[:specs]: Chứa các đoạn globbing từ URL, được tách thành mảng các cặp khóa-giá trị (field1/value1/field2/value2/...).
+ - Hash[*key_value_pairs]: Chuyển đổi mảng các cặp khóa-giá trị xen kẽ thành một hash có thể sử dụng như các điều kiện trong một truy vấn ActiveRecord.
+ - Item.where(conditions): Thực hiện một truy vấn trên mô hình Item với các điều kiện đã chỉ định.
+ - Render: Tùy thuộc vào kết quả truy vấn, bạn có thể đặt thông báo flash (flash[:error]) nếu không có sản phẩm nào khớp với tiêu chí và sau đó render view phù hợp (index hoặc một view khác)
