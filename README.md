@@ -1,563 +1,145 @@
-Định tuyến trong Rails là kiểm tra URL(địa chỉ tham chiếu tài nguyên) của 1 request và xác định 1 hành động controller nào được thực hiện. Việc xác định đúng hành động nào cần được thực thi là quan trọng nhất. Cần xây dựng 1 bộ quy tắc và bộ quy tắc này được lưu trong file routes.rb.
+REST là một kiểu kiến trúc mạng. REST bao gồm 5 quy tắc bắt buộc và 1 quy tắc không bắt buộc:
+
+ - Use of a client-server architecture
+
+ - Stateless communication
+
+ - Response cacheability
+
+ - Uniform interface
+
+ - Layered system
+
+ - Code on demand (không bắt buộc)
+
+Các hệ thống sử dụng REST được gọi là RESTful.
+
+Tài nguyên (resource) là 1 tập hơp các khái niệm biển diễn (represent) tài nguyên đó. Mấu chốt là tài nguyên là danh từ. Ví dụ tài nguyên John bao gồm:
+
+ - Chiều cao
+
+ - Cân nặng
+
+ - Tuổi
+
+ - Quốc tịch
+
+Theo chuẩn REST phản hồi tài nguyên không bao giờ chính nó mà là các biểu diễn của nó.
+
+Như ví dụ trên với 1 định danh tài nguyên duy nhất (URI) của tài nguyên John, máy chủ RESTful sẽ trả về kết quả chiều cao, cân nặng, tuổi, … dựa vào request.
+
+REST in Rails
+
+REST trong Rails tập trung vào phương pháp định nghĩa tài nguyên trong định tuyến từ đó thiết kế ra các controller có thứ tự và logic cụ thể.
+
+Routing and CRUD
+
+CRUD là viết tắt của Create Read Update Detele, đây là 4 hoạt động cơ bản tương tác với database.
+
+Đúng là Controller không ánh xạ trực tiếp đến database như Model. Nhưng để các lập trình viên không quên đi 4 hoạt động này cũng như sự đơn giản trong lập trình thì nên đặt tên cho các hành động của mình theo các thao tác CRUD—hoặc gần giống với tên của các thao tác đó. 
+
+Hệ thống định tuyến không buộc bạn phải triển khai chức năng CRUD của ứng dụng của mình theo bất kỳ cách thức nhất quán nào. Bạn có thể tạo một tuyến đường ánh xạ đến bất kỳ hành động nào, bất kể tên của hành động đó là gì. Việc chọn tên theo CRUD là một vấn đề về kỷ luật. Thực tế, trọng tâm của hỗ trợ REST trong Rails là một kỹ thuật để tạo các gói tuyến đường có tên tự động—các tuyến đường được gói gọn lại để trỏ đến một tập hợp các hành động cụ thể, đã được xác định trước. Đây là logic. Việc đặt tên hành động dựa trên CRUD là tốt. Sử dụng các tuyến đường có tên là tiện lợi và thanh lịch. Hỗ trợ REST trong Rails cung cấp cho bạn các tuyến đường có tên trỏ đến các tên hành động dựa trên CRUD.
+
+Ví dụ khi bỏ code resources :auctions vào tệp config/routes.rb sẽ tạo ra sẽ tạo ra bốn tuyến đường có tên, mà theo cách sẽ được mô tả trong chương này, kết nối với bảy hành động của controller. Và những hành động đó có tên giống như CRUD.
+
+Trong Rails khi nhắc đến tài nguyên (resource) là nhắc đến phương thức resources ví dụ resources :books .Vơi phương thức này ta có không chỉ đơn thuần là các biễu diễn của tài nguyên mà là cả một Book model, một  book controller với một tập hợp các hành động CRUD, và một số tuyến đường có tên liên quan đến bộ điều khiển đó. 
+
+The Standard RESTfulController Actions
+
+Khi bạn gọi resources :auctions, bạn đang ký một loại thỏa thuận với hệ thống định tuyến. Hệ thống sẽ cung cấp cho bạn bốn tuyến đường có tên. Giữa chúng, bốn tuyến đường này trỏ đến bảy hành động của controller, phụ thuộc vào phương thức yêu cầu HTTP. Đổi lại, bạn đồng ý sử dụng các tên hành động rất cụ thể cho controller của bạn: index, create, show, update, destroy, new, edit. Các tên này rất dễ đọc và tương tự như CRUD.
+
+Ta có hành động đi với các phương thức lần lượt như sau
+
+ - GET: index, show, new, edit
+ - POST: create
+ - PUT/PATCH: update
+ - DELETE: destroy
+
+Vì các tên đường dẫn được kết hợp với phương thức yêu cầu HTTP, bạn cần biết cách chỉ định phương thức yêu cầu khi bạn tạo ra một URL để mà các yêu cầu GET và POST cho clients_url của bạn không kích hoạt cùng một hành động của controller. Hầu hết những gì bạn cần làm trong vấn đề này có thể được tóm tắt trong vài quy tắc:
+
+ - Phương thức yêu cầu mặc định là GET.
+ - Khi thêm  form_with , phương thức POST sẽ được sử dụng tự động.
+ - Khi cần thiết (điều này chủ yếu xảy ra với các hoạt động PATCH và DELETE), bạn có thể chỉ định phương thức yêu cầu cùng với URL được tạo ra bởi tên đường dẫn có tên.
+
+Một ví dụ cụ thể khi cần chỉ định hoạt động DELETE là khi bạn muốn kích hoạt hành động
+destroy với một biểu mẫu:
+
+ form_with url: auction_path(auction), method: :delete do |f|
+
+Sự khác nhau giữa PATCH và PUT
+
+ - PATCH được sử dụng để áp dụng cập nhật một phần cho tài nguyên, nghĩa là chỉ những trường cần thay đổi mới được gửi trong nội dung yêu cầu.
+ - PUT được sử dụng để thay thế toàn bộ tài nguyên bằng một cách thể hiện mới, nghĩa là tất cả các trường của tài nguyên đều được gửi trong body yêu cầu, ngay cả khi chúng không được sửa đổi.
+
+Khi cập nhật một tài nguyên trong Rails, bạn hiếm khi thay thế hoàn toàn nó mà thay vào đó là cập nhật một hoặc nhiều thuộc tính. Do đó, yêu cầu PATCH phù hợp hơn với ý nghĩa của hành động cập nhật điển hình trong Rails.
+
+Singular and Plural RESTful Routes
+
+một số tuyến đường RESTful là số ít; một số là số nhiều. Lý do là như sau:
+
+ - Các tuyến đường cho các hành động show, new, edit và destroy là số ít vì chúng hoạt động trên một tài nguyên cụ thể.
+ - Các tuyến đường còn lại là số nhiều. Chúng xử lý với các bộ sưu tập các tài nguyên liên quan.
+
+Các tuyến đường RESTful số ít yêu cầu một đối số vì chúng cần có thể tìm ra id của thành viên trong bộ sưu tập được tham chiếu.
+
+ item_url(item)
+
+ # show, update, hoặc destroy, tùy thuộc vào phương thức HTTP
+
+Bạn không cần phải gọi phương thức id trên item. Rails sẽ tự động xác định nó (bằng cách gọi to_param trên đối tượng được truyền vào).
+
+The Special Pairs: new/create and edit/update
+
+new và edit tuân theo các quy ước đặt tên RESTful đặc biệt. Lý do cho điều này liên quan đến cách create và update hoạt động và cách new và edit liên quan đến chúng. Thông thường, các thao tác create và update bao gồm việc gửi một biểu mẫu. Điều này có nghĩa là chúng thực sự bao gồm hai hành động—hai yêu cầu—mỗi cặp:
+
+ - Hành động dẫn đến việc hiển thị biểu mẫu
+ - Hành động xử lý đầu vào của biểu mẫu khi biểu mẫu được gửi
+
+Do đó, chúng ta có các cặp hành động như sau:
+
+ - new: Hiển thị biểu mẫu để tạo một tài nguyên mới.
+ - create: Xử lý dữ liệu biểu mẫu và thực hiện việc tạo tài nguyên.
+ - edit: Hiển thị biểu mẫu để chỉnh sửa một tài nguyên hiện có.
+ - update: Xử lý dữ liệu biểu mẫu và thực hiện việc cập nhật tài nguyên.
+
+Các hành động new và edit là cần thiết để chuẩn bị dữ liệu cho các hành động create và update tương ứng. 
+
+Điểm mấu chốt, như được thực hiện trong RESTful Rails, là: Hành động new được hiểu là cung cấp cho bạn một tài nguyên mới, số ít (khác với số nhiều). Tuy nhiên, vì động từ logic cho giao dịch này là GET, và GETting một tài nguyên đơn lẻ đã được dành cho
+hành động show, nên new cần một tuyến đường có tên riêng của nó.
+
+link_to "Create a new item", new_item_path
+
+Cũng tương tự hành động edit sử dụng cùng một URL như show, nhưng với một loại biến đổi, dưới dạng /edit, đính kèm ở cuối, giống với định dạng URL cho new:
+
+Ví dụ:
+
+/items/5/edit
+
+Tuyến đường có tên tương ứng là edit_item_url(@item).
+
+The PATCH and DELETE Cheat
+
+Hầu hết các HTTP client đều có thể sử dụng các động từ này, nhưng các biểu mẫu trong trình duyệt web chỉ có thể được gửi bằng GET hoặc POST do tiêu chuẩn HTML chỉ cho phép hai động từ này trong các biểu mẫu nên Rails cung cấp một cách giải quyết. Một yêu cầu PATCH hoặc DELETE thực sự là một yêu cầu POST với một trường ẩn gọi là _method được đặt thành "patch" hoặc "delete". Ứng dụng Rails xử lý yêu cầu này sẽ nhận ra và định tuyến yêu cầu tương ứng đến hành động update hoặc destroy.
 
 
-1 Routes được xây dựng phải đảm bảo được 2 yếu tố đó là phải cung cấp đủ thông tin để vừa khớp với một URL hiện có vừa tạo ra một URL mới. Về cấu trúc của Routes:
+ form_with model: @item, method: :patch do |f|
 
+  # Các trường biểu mẫu khác
 
- - Phương thức HTTP (GET, POST, PUT, PATCH, DELETE,v.v.).
+  <%= f.submit "Update Item" %>
 
-
- - Phải xác định được 1 Patterns (mẫu) để match được với URL cũ cũng như dựa vào nó tạo ra URL mới. Một Patterns có thể bao gồm 
-
-
-    -  Static String (chuỗi tĩnh) có thể hiểu như là 1 biến được khai báo 1 lần và được lưu trữ trong bộ nhớ suốt thời gian chạy của chương trình
-
-
-    -  Dấu gạch chéo (/) mô phỏng cú pháp URL
-
-
-    -  Segment Keys (Khoá phân đoạn) một khái niệm được sử dụng trong quản lý dữ liệu, đặc biệt là trong các hệ thống cơ sở dữ liệu, phân tích dữ liệu, và lập chỉ mục (indexing).Khóa phân đoạn thường được dùng để phân chia và tổ chức dữ liệu thành các phân đoạn (segments) hoặc nhóm nhỏ hơn để tối ưu hóa việc truy cập và quản lý dữ liệu. 
-
- - Chỉ định controller và action mà route sẽ ánh xạ đến.
-
- Ví dụ:  get "recipes/:ingredient" => "recipes#index
-
- · get: phương thức HTTP mà route này sẽ xử lý, trong trường hợp
-   này là GET.
-
-
- · "recipes/:ingredient": Đây là URL pattern, trong đó : recipes là 1
-    chuỗi tĩnh :ingredient là khoá phân đoạn. Bất kỳ giá trị nào được truyền vào phần định danh này của URL sẽ được chuyển đến hành động index trong controller Recipes.
-
-
- · "recipes#index": Đây là định danh của controller và hành động trong controller sẽ xử lý yêu cầu này. Trong trường hợp này, nó chỉ ra rằng yêu cầu sẽ được xử lý bởi hành động index trong controller Recipes.
-
-Routes.rb
-
- Các routes được định nghĩa trong tệp config/routes.rb. File này được tạo khi khởi động 1 dự án Rails.
-
- Trong file hiện tại đang có
-
-  Rails.application.routes.draw do
-
-  end
-
- Đây là khối mã để định nghĩa các tuyến đường cho ứng dụng Ruby on Rails. Tất cả các định nghĩa tuyến đường sẽ được đặt bên trong khối này.
-
-Regular Routes
-
- Như đã mô tả ở trên các cơ bản để định nghĩa 1 tuyến là cung cấp 1 mẫu URL, tên lớp controller với tên hành động và cuối cùng là phương thức HTTP mong muốn.
-
-   match "products", controller: "products", action: "index", via: :get
-
-   Giải thích chi tiết
-   - match: Đây là một phương thức trong Rails để định nghĩa một tuyến đường. match có thể được sử dụng để ánh xạ một URL đến một hành động controller cho nhiều phương thức HTTP (GET, POST, PUT, PATCH, DELETE), tùy theo tùy chọn via.
-   - "products": Đây là mẫu URL mà tuyến đường này sẽ khớp. Trong trường hợp này, bất kỳ yêu cầu nào đến /products sẽ được khớp với tuyến đường này.
-   - controller: "products": Đây là tên của controller mà yêu cầu sẽ được chuyển đến Trong trường hợp này, nó là ProductsController.
-   - action: "index": Đây là tên của hành động trong controller sẽ được gọi. Trong trường hợp này, nó là hành động index.
-   - via: :get: Điều này chỉ ra rằng tuyến đường này sẽ xử lý các yêu cầu HTTP GET.
+ end
  
- Định nghĩa một tuyến mà không chỉ định phương thức HTTP sẽ dẫn đến việc Rails ném ra ngoại lệ ArgumentError. Do đó, bạn cần phải giới hạn phương thức HTTP được sử dụng để truy cập một tuyến.
+ form_with url: item_path(@item), method: :delete do
  
- Nếu, vì lý do nào đó, bạn muốn giới hạn một tuyến cho nhiều hơn một phương thức HTTP, bạn có thể truyền một mảng các tên động từ (verb) cho :via.
- 
- 
- Kết hợp với đoạn code trong file routes.rb ta có
+  <%= submit_tag "Delete Item" %>
 
-  Rails.application.routes.draw do
+ end
 
-   match "products", controller: "products", action: "index", via: :get
+Limiting Routes Generated
 
-  end
+Bạn có thể thêm các tùy chọn :except và :only vào resources để giới hạn các tuyến đường được tạo ra.
 
- đây là 1 ví dụ về routes trong rails.
- 
- match "products", controller: "products", action: "index", via: :get
- đoạn code trên có thể được rút ngắn thay vì cung cấp lớp controller và hành động riêng biệt, có thể sử dụng một chuỗi ánh xạ với tham số đặc biệt :to:
- 
- match "products", to: "products#index", via: :get vì tùy chọn to rất phổ biến, một dạng viết tắt được cung cấp:
+resources :clients, except: [:index]
 
- match "products" => "products#index", via: :get Rails cung cấp thêm một dạng viết tắt nữa bằng cách thay thế match bằng phương thức HTTP mong muốn (như get, post, patch, v.v.):
-
- get "products" => "products#index"
-
-Segment Keys (khoá phân đoạn)
-
- Chuỗi mẫu URL có thể chứa các tham số (được ký hiệu bằng dấu hai chấm) được gọi là khóa phân đoạn. Trong khai báo tuyến sau đây, :id là một khóa phân đoạn:
-
-  get "products/:id" => "products#show"
-
- Khi tuyến này khớp với một URL yêu cầu, phần :id của mẫu hoạt động như một loại trình khớp và lấy giá trị của phân đoạn đó. Ví dụ, sử dụng ví dụ trên, giá trị của id cho URL sau sẽ là 4: http://example.com/products/4. Điều này có nghĩa là giá trị của params[:id] sẽ được thiết lập thành chuỗi "4". Bạn có thể truy cập giá trị đó bên trong hành động products#show.
-
- Trong View (app/views/some_view.html.erb)
-
- Khi bạn tạo một URL, bạn phải cung cấp các giá trị sẽ gắn vào các khóa phân đoạn bên trong chuỗi mẫu URL. Cách đơn giản nhất để hiểu (và nguyên bản) là sử dụng một hash, như sau:
-
-  link_to "Products",
-
-  controller: "products",
-
-  action: "show",
-
-  id: 1
-
- link_to: Đây là một phương thức trợ giúp (helper method) trong Rails để tạo ra một liên kết HTML.
-
- Cách hoạt động
- Khi người dùng nhấp vào liên kết, một yêu cầu HTTP GET sẽ được gửi đến URL /products/1. Rails sẽ ánh xạ yêu cầu này đến hành động show trong ProductsController, với params[:id] bằng 1. Hành động show trong ProductsController sẽ sử dụng params[:id] để tìm và hiển thị chi tiết của sản phẩm có ID là 1.
-
- Spotlight on the :id Field
-
- Trong Controller (app/controllers/products_controller.rb)
-
- Controller chịu trách nhiệm xử lý các yêu cầu và trả về phản hồi thích hợp
-
-  class ProductsController < ApplicationController
-
-   def show
-
-    @product = Product.find(params[:id])
-
-   end
-
-  end
-
- Giải thích chi tiết
- - class ProductsController < ApplicationController:
- - Định nghĩa một controller mới có tên là ProductsController.
- - Controller này kế thừa từ ApplicationController, vì vậy nó sẽ có tất cả các phương thức và tính năng của ApplicationController.
- - def show:
- - Định nghĩa một hành động trong controller có tên là show. Hành động này sẽ được gọi khi có một yêu cầu HTTP GET đến một URL tương ứng với hành động show (thường là /products/:id).
- - @product = Product.find(params[:id]):
- - Tìm một bản ghi Product từ cơ sở dữ liệu dựa trên id được truyền qua URL (thông qua params[:id]).
- - params[:id] lấy giá trị của tham số id từ yêu cầu URL.
- - Product.find là một phương thức Active Record để tìm bản ghi theo id.
- - Bản ghi tìm được sẽ được gán cho biến instance @product, biến này có thể được sử dụng trong view tương ứng để hiển thị dữ liệu.
-
-Optional Segment Keys (Khoá phân đoạn tuỳ chọn)
-
- Bạn có thể định nghĩa một khóa phân đoạn là tùy chọn bằng cách đặt nó trong dấu ngoặc đơn 
-
-  get "products(/:id)" => 'products#display
-
- Điều này sẽ khớp với cả /products cũng như các đường dẫn như /products/15.
-
-Segment Key Constraints (Ràng buộc khoá phân đoạn)
-
- Đôi khi bạn muốn không chỉ nhận dạng một tuyến mà còn nhận dạng nó ở mức độ chi tiết hơn so với chỉ những thành phần hoặc trường nó có. Bạn có thể thực hiện điều này thông qua việc sử dụng tùy chọn :constraints
-
-  get "products/:id" => "products#show", constraints: {:id => /\d+/}
-
-  get "products/:id" => "products#show_error
-
- Ở ví dụ trên bạn có thể định tuyến tất cả các yêu cầu show để chúng đi đến một hành động error nếu trường id của chúng không phải là số.
-
-Rút gọn Ràng Buộc
-
- Việc thiết lập ràng buộc trên tham số :id là rất phổ biến, do đó Rails cho phép bạn rút gọn ví dụ trước đó của chúng ta thành:
-
-  get "products/:id" => "products#show", id: /\d+/
-
-  get "products/:id" => "products#show_error"
-
-Ràng Buộc trên Các Thuộc Tính Yêu Cầu Khác
-
- Từ ví dụ, bạn có thể kết luận rằng việc kiểm tra :constraints áp dụng cho các phần tử của hash params. Tuy nhiên, bạn cũng có thể kiểm tra một loạt các thuộc tính yêu cầu khác trả về một chuỗi, chẳng hạn như :subdomain và :referrer.
-
-  get "products/:id" => "products#show", constraints: { subdomain: 'admin' }
-
-  constraints: { subdomain: 'admin' }: Đây là phần quan trọng của đoạn mã và chỉ ra ràng buộc (constraints) đối với subdomain. Cụ thể là:
-  - Tuyến đường này chỉ áp dụng khi subdomain là 'admin'.
-  - Nghĩa là yêu cầu chỉ được định tuyến đến hành động show trong ProductsController nếu subdomain của URL là 'admin'.
-
-Defining Defaults
- Bạn có thể định nghĩa các tham số mặc định trong một tuyến bằng cách cung cấp một hash cho tùy chọn :defaults. Điều này còn áp dụng cho các tham số mà bạn không chỉ định là các phân đoạn động trong tuyến chính nó.
-
-  get "photos/:id", to: "photos#show", defaults: { format: "jpg" }
-
- Trong ví dụ trên, Rails sẽ khớp http://example.com/photos/12 với hành động show của PhotosController, và thiết lập params[:format] thành "jpg". Vì lý do bảo mật, bạn không thể ghi đè lên các giá trị mặc định bằng cách thay đổi các giá trị trong đối tượng params.
-
-Redirect Routes
-
- phương thức redirect: chuyển hướng của tuyến.
-
-  - Chuyển hướng đến một URL khác
-    get "/google", to: redirect("https://google.com/")
-
-  - Sử dụng block trong chuyển hướng
-    Phương thức redirect cũng có thể nhận một block, mà nhận các tham số của yêu cầu làm đối số của nó. Điều này cho phép bạn thực hiện các phiên bản nhanh của các điểm cuối API dịch vụ web chẳng hạn:
-
-    match "/api/v1/:api",
-
-    to: redirect { |params| "/api/v2/#{params[:api].pluralize}" },
-
-    via: [:get, :post]
-
-
-    to: redirect { |params| "/api/v2/#{params[:api].pluralize}" }:
-
-    Chỉ định rằng khi có yêu cầu đến URL /api/v1/:api, hệ thống sẽ thực hiện một hành động redirect (chuyển hướng) đến một URL mới được tạo ra dựa trên logic trong block { |params| ... }.
-      - params[:api]: Lấy giá trị của tham số :api từ yêu cầu HTTP.
-      - .pluralize: Phương thức của Rails được sử dụng để biến đổi chuỗi thành dạng số nhiều. Ví dụ, nếu params[:api] là "user" thì params[:api].pluralize sẽ là "users".
-      - Vì vậy, URL mới sẽ có dạng /api/v2/#{params[:api].pluralize}. Ví dụ, nếu params[:api] là "user", thì URL mới sẽ là /api/v2/users.
-
- Thêm các tham số cho chuyển hướng
-
- Phương thức redirect cũng có thể nhận các tham số như :status (mặc định là 301 cho chuyển hướng):
-
-  match "/api/v1/:api",to:
-
-  redirect(status: 302) { |params| "/api/v2/#{params[:api].pluralize}" },
-  
-  via: [:get, :post]
-
-Routes as Rack Endpoints
-
- Định tuyến mà không cần phải định nghĩa một controller và một hành động riêng biệt. Giá trị được gọi là 1 điểm cuối của Rack.
-
-  get "/hello", to: proc { |env| [200, {}, ["Hello world"]] }
-
-  to: proc { |env| [200, {}, ["Hello world"]] }: Chỉ định rằng khi có yêu cầu đến URL /hello, hệ thống sẽ thực hiện một xử lý tùy chỉnh thông qua một đoạn mã được cung cấp dưới dạng một đối tượng Proc.
-   - proc { |env| ... }: Đây là một đối tượng Proc (là một đoạn mã được đóng gói và có thể được gọi) nhận một tham số env, đại diện cho môi trường yêu cầu.
-   - env chứa thông tin về yêu cầu HTTP như method (GET, POST, PUT,...), headers, và các thông tin khác.
-   - [200, {}, ["Hello world"]]: Trả về một mảng gồm ba phần tử:
-     -  200: Mã trạng thái HTTP OK, cho biết yêu cầu đã được xử lý thành công.
-     - {}: Headers trống, không có thông tin bổ sung cần được trả về.
-     - ["Hello world"]: Nội dung của phản hồi, trong trường hợp này là một mảng chứa một chuỗi "Hello world".
-
-The Root Route
-
- Tuyến đường gốc là một quy tắc xác định hành động gì sẽ xảy ra khi ai đó kết nối đến "gốc" của trang web của bạn. Khi bạn kết nối đến một trang web với chỉ tên miền (ví dụ: http://example.com) mà không có bất kỳ đường dẫn cụ thể nào ở cuối URL, tuyến đường gốc quy định rằng ứng dụng sẽ thực hiện hành động gì (hiển thị gì ở trang chủ)
-
-  root to: "welcome#index"
-
-  root to: "pages#home"
-
-  root "user_sessions#new"
-
-Route Globbing
-
- cho phép bạn xác định các tuyến đường linh hoạt hơn bằng cách sử dụng đường dẫn có ký tự đại diện (wildcard) để phù hợp với nhiều URL khác nhau cùng một lúc. Ví dụ như liệt kê các URL của các sản phẩm từ gỗ
-
-Globbing Key-Value Pairs
-
- Ví dụ về Kiểu URI
-
-  Giả sử bạn thiết kế một kiểu URI như sau:
-
-   http://localhost:3000/items/q/field1/value1/field2/value2/...
-
-   Mẫu này cho phép người dùng yêu cầu trả về danh sách sản phẩm dựa trên các trường và giá trị tương ứng của chúng.
-
-   Ví dụ, URL như http://localhost:3000/items/q/year/1939/material/wood có thể tạo ra danh sách các mặt hàng được làm từ gỗ trong năm 1939.
-
- Ta có thể triển khai như sau:
-
- Định nghĩa Tuyến Đường
-
- Để xử lý cấu trúc khóa-giá trị động này trong các tuyến đường của Rails của bạn, bạn sẽ định nghĩa một tuyến đường sử dụng kỹ thuật globbing:
-
-  get "items/q/*specs", controller: "items", action: "query"
-
-  Ở đây:
-   - "items/q/*specs" là mẫu URL trong đó *specs chứa tất cả các đoạn sau "items/q/".
-   - "items" là tên của controller.
-   - "query" là tên của action trong ItemsController.
-
- Triển Khai Hành Động Trong Controller
-
- Tiếp theo, bạn cần triển khai hành động query trong ItemsController để xử lý các tham số và thực hiện truy vấn:
-
-  def query
-
-   @items = Item.where(Hash[*params[:specs].split("/")])
-
-   if @items.empty?
-
-    flash[:error] = "Can't find items with those properties"
-
-   end
-
-   render :index
-
-  end
-
- Giải thích
- - params[:specs]: Chứa các đoạn globbing từ URL, được tách thành mảng các cặp khóa-giá trị (field1/value1/field2/value2/...).
- - Hash[*key_value_pairs]: Chuyển đổi mảng các cặp khóa-giá trị xen kẽ thành một hash có thể sử dụng như các điều kiện trong một truy vấn ActiveRecord.
- - Item.where(conditions): Thực hiện một truy vấn trên mô hình Item với các điều kiện đã chỉ định.
- - Render: Tùy thuộc vào kết quả truy vấn, bạn có thể đặt thông báo flash (flash[:error]) nếu không có sản phẩm nào khớp với tiêu chí và sau đó render view phù hợp (index hoặc một view khác)
-
-Named Routes
-
-Creating a Named Route
-
- Đặt tên cho 1 Route bằng cách sử dụng tham số tùy chọn :as Ví dụ:
-
-  get "help" => "help#index", as: "help"
-
- và tạo đường dẫn 
-
-  link_to "Help", help_path
-
- ví dụ
-
-  link_to "Auction of #{item.name}",
-
-  controller: "items",
-
-  action: "show",
-
-  id: item.id
-
- với route 
-
-  get "item/:id" => "items#show"
-
- có thể rút ngắn định nghĩa trong file route.rb thành 
-
-  get "item/:id" => "items#show", as: "item
-
- và trong file view thành 
-
-  link_to "Auction of #{item.name}", item_path(id: item.id)
-
- Có thể rút gọn ngắn hơn nữa bằng cách sử dụng phương thức to_param để Rails tự động lấy id.
-
- Mặc định, Rails sử dụng ID của đối tượng làm tham số mặc định trong URL. Ví dụ, nếu bạn có một đối tượng User với ID là 1, URL mặc định sẽ là /users/1. Tuy nhiên, sử dụng to_param, bạn có thể định nghĩa một cách tùy biến hóa cách biểu diễn của đối tượng này trong URL. Thay vì sử dụng ID, bạn có thể sử dụng bất kỳ trường nào khác trong model, chẳng hạn như slug, name, title,... 
-
- Ví dụ:
- Giả sử bạn có một model User trong Rails và bạn muốn sử dụng username của người dùng thay vì ID trong URL:
-
-  class User < ApplicationRecord
-
-   def to_param
-
-    username
-
-   end
-
-  end
-
- Khi bạn sử dụng phương thức to_param như trên, mỗi khi bạn truy cập đến một đường dẫn sử dụng đối tượng User, ví dụ như user_path(user), Rails sẽ sử dụng giá trị của username của đối tượng để xây dựng URL thay vì ID. Ví dụ, nếu username của người dùng là "john_doe", URL sẽ trở thành /users/john_doe thay vì /users/1.
-
-
- Như vậy ta chỉ cần:
-
- link_to "Auction of #{item.name}", item_path(item)
-
- Nguyên tắc này cũng sử dụng kết hợp vs khoá phân đoạn 
-
- get "auction/:auction_id/item/:id" => "items#show", as: "item"
-
- link_to "Auction of #{item.name}", item_path(auction, item)
-
-Direct Routes
-
- Trong Rails routing, phương thức directcung cấp cách để tạo các trợ giúp URL tùy chỉnh liên kết đến các URL tĩnh. Điềunày rất hữu ích khi bạn có các URL không thay đổi và muốn định nghĩa chúng một lần và sử dụng trong toàn bộ ứng dụng của bạn.
-
- Tạo Direct Route
-
-  Dưới đây là cách bạn có thể sử dụng phương thức direct để định nghĩa trợ giúp URL tùy chỉnh:
-
-  direct(:apple) { "http://www.apple.com" } 
-
-  Trong ví dụ này:
-   direct(:apple)
-      - tạo ra một trợ giúp URL tùy chỉnh có tên là apple_url.
-
-      - Khối { "http://www.apple.com" } xác định URL tĩnh mà apple_url sẽ phân giải tới.
-
-Scoping Routing Rules
-
- Rails cung cấp nhiều cách để nhóm các quy tắc routing liên quan lại với nhau một cách ngắn gọn và hiệu quả. Các cách này dựa trên việc sử dụng phương thức scope và các shortcut của nó. Điều này giúp cho file routes.rb của bạn trở nên sạch sẽ và dễ quản lý hơn.
-
- Ví dụ:
-
-  get "auctions/new" => "auctions#new"
-  
-  get "auctions/edit/:id" => "auctions#edit"
-
-  post "auctions/pause/:id" => "auctions#pause"
-
- sử dụng phương thức scope để làm cho file routes.rb ngắn gọn hơn:
-
-  scope controller: :auctions do
-
-   get "auctions/new" => :new
-
-   get "auctions/edit/:id" => :edit
-
-   post "auctions/pause/:id" => :pause
-
-  end
-
- Trong ví dụ trên:
-
-  scope controller: :auctions chỉ định rằng tất cả các route bên trong block này sẽ
-     sử dụng controller auctions.
-  Các hành động (new, edit, pause) được viết gọn hơn mà không cần chỉ định lại tên
-     controller.
-
- Them tham số :path vào scope: để ngắn gọn hơn nữa
-
-  scope path: "/auctions", controller: :auctions do
-
-   get "new" => :new
-
-   get "edit/:id" => :edit
-
-   post "pause/:id" => :pause
-
-  end
-
- Việc sử dụng scope trong Rails là một cách hiệu quả để quản lý và tổ chức các quy tắc routing trong ứng dụng của bạn. Bằng cách nhóm các route liên quan lại với nhau và sử dụng các tham số như :controller và :path, bạn có thể làm cho file routes.rb trở nên ngắn gọn, dễ đọc và dễ bảo trì hơn.
-
-Controller
- Có thể viết gọn hơn nữa từ 
-
-  scope controller: :auctions do
-
- thành 
-
-  scope :auctions do 
-
- hoặc 
-
-  controller :auctions do
-
-Path Prefix
-
- Phương thức scope chấp nhận tùy chọn :path hoặc có thể diễn giải một chuỗi (string) là đối số đầu tiên để biểu thị tiền tố đường dẫn.
-
-  scope path: "/auctions" do
-
-   get "new" => "auctions#new"
-
-   get "edit/:id" => "auctions#edit"
-
-   post "pause/:id" => "auctions#pause"
-
-  end
-
- Đều sử dụng path nhưng ở ví dụ trên đã chỉ định sử dụng controller AuctionsController nên k cần phải chỉ định controller cho mỗi route nữa
-
-Name Prefix
-
- Tùy chọn :as cho phép bạn thêm một tiền tố vào tên của các phương thức trợ giúp URL. Điều này rất hữu ích khi bạn cần phân biệt các nhóm đường dẫn khác nhau trong ứng dụng của mình. Ví
- dụ sau đây minh họa cách sử dụng :as để tạo ra các phương thức trợ giúp URL với tiền tố admin:
-
-  scope :auctions, as: 'admin' do
-
-   get 'new' => :new, as: 'new_auction'
-
-  end
-
- Giúp phân biệt các nhóm đường dẫn khác nhau trong ứng dụng.
-
-Namespaces
-
- Phương thức namespace trong Rails là một cú pháp ngắn gọn kết hợp các thiết lập module, tên tiền tố (name prefix) và tiền tố đường dẫn (path prefix) vào một khai báo duy nhất. Điều này giúp tổ chức các quy tắc routing một cách dễ dàng và gọn gàng hơn.
-
-  namespace :auctions do
-
-   get 'new' => :new
-
-   get 'edit/:id' => :edit
-
-   post 'pause/:id' => :pause
-
-  end
-
- Khi sử dụng namespace, các quy tắc URL sẽ được tổ chức theo các cách sau:
-  Module:
-     Các hành động được định nghĩa trong một module có tên tương ứng với namespace. Trong ví dụ trên, các hành động sẽ nằm trong module Auctions.
-
-  Name Prefix:
-     Các phương thức trợ giúp URL sẽ có tiền tố tương ứng với namespace. Ví dụ: new_auction_url, edit_auction_url, pause_auction_url.
-
-  Path Prefix:
-     Các URL sẽ có tiền tố đường dẫn tương ứng với namespace. Ví dụ: /auctions/new, /auctions/edit/:id, /auctions/pause/:id.
-
- Như vậy sự khác biệt giữa scope và namespaces là scope có thể tuỳ chỉnh 3 tham số module, path và as
-
-Bundling Constraints
-
- Có thể thêm ràng buộc vào phương thức scope. Trường hợp dưới đây ràng buộc cho toàn bộ tuyến
-
-  scope controller: :auctions, constraints: {:id =>/\d+/} do
-
-   get "edit/:id" => :edit
-
-   post "pause/:id" => :pause
-
-  end
-
- hoặc trường hợp một tập hợp các quy tắc trong một scope cụ thể cần các ràng buộc.
-
-  scope path: "/auctions", controller: :auctions do
-
-   get "new" => :new
-
-   constraints id: /\d+/ do
-
-    get "edit/:id" => :edit
-
-    post "pause/:id" => :pause
-
-   end
-
-  end
-
- Để tăng tính tái sử dụng theo mô-đun, bạn có thể cung cấp phương thức constraints với một đối tượng có phương thức matches?. Đây là ví dụ về cách làm điều này:
- 
-  class DateFormatConstraint
-
-   def self.matches?(request)
-
-    request.params[:date] =~ /\A\d{4}-\d\d-\d\d\z/
-
-   end
-
-  end
-
-  constraints(DateFormatConstraint) do
-
-   get 'since/:date' => :since
-
-  end
-
- Trong ví dụ này, DateFormatConstraint kiểm tra xem tham số :date có định dạng đúng YYYY-MM-DD hay không. Nếu người dùng nhập một tham số date không đúng định dạng qua URL, Rails sẽ phản hồi với mã trạng thái 404 thay vì gây ra một ngoại lệ.
-
-Listing Routes
-
- Rails cung cấp một tiện ích hữu ích để liệt kê các tuyến đường có trong ứng dụng bằng cách gõ rails routes trong thư mục ứng dụng của bạn. Dưới đây là ví dụ về đầu ra của một tập tin routes.rb chứa một quy tắc duy nhất resources :products:
-
- Đầu ra là một bảng có bốn cột:
-  Prefix:
-     Tên của tuyến đường (nếu có).
-
-  Verb:
-     Phương thức HTTP được sử dụng (GET, POST, PATCH, PUT, DELETE).
-
-  URI Pattern:
-     Chuỗi ánh xạ URL.
-
-  Controller#Action:
-     Bộ điều khiển và phương thức hành động mà tuyến đường ánh xạ tới, cộng với các ràng buộc đã được định nghĩa trên khóa đoạn của tuyến đường (nếu có).
-
- Tùy Chọn Liệt Kê Theo Bộ Điều Khiển
-
- Lệnh rails routes còn hỗ trợ kiểm tra một bộ điều khiển cụ thể bằng cách sử dụng tùy chọn -c. Ví dụ, để chỉ liệt kê các tuyến đường liên quan đến ProductsController, bạn có thể sử dụng lệnh sau:
-
-  $ rails routes -c products
-
-  Ví dụ: 
-  Rails.application.routes.draw do
-
-   resources :products
-
-  end
-
-  Giải thích chi tiết
-  Khi bạn định nghĩa resources :products, Rails sẽ tự động tạo ra một tập hợp các tuyến đường chuẩn để xử lý các hành động CRUD (Create, Read, Update, Delete) cho tài nguyên products.
+resources :clients, only: [:new, :create]
