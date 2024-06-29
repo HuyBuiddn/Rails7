@@ -84,8 +84,6 @@ Các tuyến đường RESTful số ít yêu cầu một đối số vì chúng 
 
  item_url(item)
 
- # show, update, hoặc destroy, tùy thuộc vào phương thức HTTP
-
 Bạn không cần phải gọi phương thức id trên item. Rails sẽ tự động xác định nó (bằng cách gọi to_param trên đối tượng được truyền vào).
 
 The Special Pairs: new/create and edit/update
@@ -124,8 +122,6 @@ Hầu hết các HTTP client đều có thể sử dụng các động từ này
 
  form_with model: @item, method: :patch do |f|
 
-  # Các trường biểu mẫu khác
-
   <%= f.submit "Update Item" %>
 
  end
@@ -143,3 +139,145 @@ Bạn có thể thêm các tùy chọn :except và :only vào resources để gi
 resources :clients, except: [:index]
 
 resources :clients, only: [:new, :create]
+
+Singular Resource Routes
+
+Ngoài resources, còn có một dạng tuyến đường tài nguyên đơn (singleton): resource. Nó được sử dụng để đại diện cho một tài nguyên chỉ tồn tại một lần trong ngữ cảnh cụ thể của nó. Ví dụ là một hồ sơ cá nhân cho mỗi người dùng. Khi bạn sử dụng resource, bạn sẽ nhận được hầu hết các tuyến đường tài nguyên đầy đủ, ngoại trừ tuyến đường dành cho tập hợp (collection route - index). Lưu ý rằng tên phương thức resource, tham số cho phương thức đó, và tất cả các tuyến đường được tạo ra đều ở dạng số ít.
+
+resource :profile
+
+Cụ thể, bạn sẽ nhận được các tuyến đường sau:
+
+GET /profile → profiles#show
+
+GET /profile/new → profiles#new
+
+POST /profile → profiles#create
+
+GET /profile/edit → profiles#edit
+
+PATCH/PUT /profile → profiles#update
+
+DELETE /profile → profiles#destroy
+
+Nested Resources
+
+Khi làm việc với các tài nguyên lồng nhau, bạn tạo ra một cấu trúc phân cấp trong các URL để biểu diễn mối quan hệ giữa các tài nguyên. Điều này đặc biệt hữu ích khi một tài nguyên gắn liền với một tài nguyên khác. Trong ví dụ của bạn, một bid (đấu giá) thuộc về một auction (cuộc đấu giá), vì vậy hợp lý khi lồng các bids trong auctions trong các routes của bạn. Để tạo các routes tài nguyên lồng nhau, bạn có thể thêm đoạn sau vào tệp config/routes.rb
+
+ resources :auctions do
+
+  resources :bids
+
+ end
+
+Giải Thích:
+
+ - resources :auctions định nghĩa các routes tiêu chuẩn cho tài nguyên auctions (các phiên đấu giá). Nó sẽ tạo ra các routes cho các hành động CRUD  (Create, Read, Update, Delete) như index, show, new, create, edit, update, và destroy.
+
+ - resources :bids bên trong block resources :auctions định nghĩa các routes tiêu chuẩn cho tài nguyên bids (các đấu thầu) và đặt chúng trong ngữ cảnh của tài nguyên cha auctions. Điều này có nghĩa là các routes cho bids sẽ phụ thuộc vào auctions, tức là bạn sẽ có các URL dạng như /auctions/:auction_id/bids.
+
+Tuy nhiên, lệnh tài nguyên lồng nhau cũng bao hàm rằng bạn đang thực hiện một lời hứa. Bạn đang hứa rằng bất cứ khi nào bạn sử dụng các helper route có tên cho bid, bạn sẽ cung cấp một tài nguyên auction để chúng có thể được lồng vào. Trong mã ứng dụng của bạn, điều này dịch thành một tham số cho phương thức route có tên:
+
+link_to "See all bids", auction_bids_path(auction)
+
+Các tài nguyên không nên được lồng nhau quá một cấp độ sâu. Các phương thức trợ giúp cho các đường dẫn lồng nhau hơn hai cấp độ trở nên dài và khó quản lý. Rất dễ mắc lỗi với chúng và khó tìm ra lỗi khi chúng không hoạt động như mong đợi. Lý do? Các URL kết quả ngắn hơn và các phương thức trợ giúp dễ làm việc hơn.
+
+resource routes chấp nhận một tùy chọn :shallow giúp rút ngắn các URL khi có thể. Mục tiêu là bỏ qua các đoạn URL của bộ sưu tập cha (parent collection) khi chúng không cần thiết. Kết quả cuối cùng là chỉ các tuyến lồng nhau cho các hành động :index :create, và :new được tạo ra.
+
+ resources :auctions, shallow: true do
+
+  resources :bids do
+
+   resources :comments
+
+  end
+
+ end
+
+Routing Concerns
+
+Một trong những nguyên tắc cơ bản mà các lập trình viên Rails tuân theo là Don’t Repeat Yourself (DRY - Đừng lặp lại chính mình). Tuy nhiên, file config/routes.rb vẫn có thể dễ bị lặp lại dưới dạng các tuyến lồng nhau được chia sẻ giữa nhiều tài nguyên. Ví dụ, giả sử trong ví dụ liên tục của chúng ta, cả auctions và bids đều có thể có các comments liên kết với chúng.
+
+ resources :auctions do
+ 
+  resources :comments
+
+ end
+
+ resources :bids do
+ 
+  resources :comments
+
+ end
+
+Rails cung cấp một cách để tránh lặp lại bằng cách sử dụng concerns. Bạn có thể định nghĩa các tuyến chia sẻ trong một concern và sau đó bao gồm concern đó trong các tài nguyên khác nhau.
+
+Đầu tiên, bạn định nghĩa một concern cho các comments:
+
+ concern :commentable do
+ 
+  resources :comments
+
+ end
+
+Sau đó, bạn có thể bao gồm concern đó trong các tài nguyên khác nhau:
+
+ resources :auctions, concerns: :commentable
+
+ resources :bids, concerns: :commentable
+
+Bằng cách này, bạn tránh được sự lặp lại và giữ cho file config/routes.rb của bạn gọn gàng và dễ bảo trì hơn.
+
+RESTful Route Customizations
+
+Có hai loại hành động tùy chỉnh: hành động thành viên (member actions) và hành động tập hợp (collection actions).
+
+Menber actions: ví dụ đoạn code sau
+
+ resources :auctions do
+ 
+  member do
+   
+   post 'mark_as_ended'
+ 
+  end
+
+ end
+
+Giải thích:
+
+ - member do ... end: Khối member được sử dụng để định nghĩa các đường dẫn tùy chỉnh cho một thành viên cụ thể của tài nguyên. Các đường dẫn được tạo ra sẽ chứa id của tài nguyên trong URL.
+
+ - post 'mark_as_ended': Định nghĩa một route tùy chỉnh mark_as_ended sử dụng phương thức HTTP POST.Đường dẫn này sẽ có dạng /auctions/:id/mark_as_ended, nơi :id là id của phiên đấu giá cụ thể mà bạn muốn đánh dấu là đã kết thúc.
+
+Collection actions: ví dụ đoạn code sau
+
+ resources :auctions do
+
+  collection do
+   
+   get 'search'
+ 
+  end
+
+ end
+
+Giải thích:
+
+ - collection do ... end: Khối collection được sử dụng để định nghĩa các đường dẫn tùy chỉnh cho toàn bộ bộ sưu tập của tài nguyên. Các đường dẫn này không yêu cầu id của một phiên đấu giá cụ thể trong URL.
+
+ - get 'search': Định nghĩa một route tùy chỉnh search sử dụng phương thức HTTP GET.Đường dẫn này sẽ có dạng /auctions/search, không cần id của phiên đấu giá cụ thể.
+
+Controller-Only Resources
+
+một tài nguyên REST không nhất thiết phải ánh xạ trực tiếp vào một controller. Bạn có thể, nếu muốn, cung cấp các dịch vụ REST mà các định danh công khai của chúng (URI) không khớp với tên của các controller của bạn.
+
+The RESTful Rails Action Set
+ 
+ - Index: Hiển thị danh sách các tài nguyên.
+ - Show: Hiển thị thông tin chi tiết về một tài nguyên cụ thể. 
+ - Create: Hiển thị form để tạo mới một tài nguyên.
+ - New: Tạo mới một đối tượng tài nguyên (không phải là hành động RESTful riêng biệt nhưng thường đi kèm với Create).
+ - Edit: Hiển thị form để chỉnh sửa thông tin của một tài nguyên.
+ - Update: Cập nhật thông tin của một tài nguyên sau khi chỉnh sửa.
+ - Destroy: Xóa bỏ một tài nguyên khỏi hệ thống.
