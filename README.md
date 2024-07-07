@@ -1089,3 +1089,510 @@ The RESTful Rails Action Set
  - Edit: Hiển thị form để chỉnh sửa thông tin của một tài nguyên.
  - Update: Cập nhật thông tin của một tài nguyên sau khi chỉnh sửa.
  - Destroy: Xóa bỏ một tài nguyên khỏi hệ thống.
+
+Chapter4 
+
+Action Dispatch 
+
+ Action Dispatch là 1 mô-đun con của mô-đun Action Pack.
+
+ Action Dispatch xử lý routing các request, nó xử lý các request và xử lý một vài quá trình liên quan đến giao thức HTTP như xử lý cookies, session…
+
+ Phương thức draw trong file config/routes.rb gọi tới ActionDispatch::Routing::RouteSet 
+
+ Khi Rails app khởi động, RouteSet sẽ được khởi tạo. Nó build cái routes từ file routes.rb. Và nó cũng chính là thành phần đầu tiên nhận request từ client sau khi đi qua Rack và các middleware khác.
+
+ RouteSet::Dispatcher
+
+ Dispatcher là 1 class nhỏ chịu trách nhiệm khởi tạo controller và có nhiệm vụ chuyển request tới đúng controller để xử lý và trả về response.
+
+  get "demo" => "demo#index"
+
+ route trên sử dụng dispatcher. Ta có thể bỏ qua dispatcher bằng cách viết 
+
+  get "demo" => DemoController.action(:index)
+
+ Ví dụ (A):
+
+ - Tạo democontroller trong app/controllers/demo_controller.rb với code sau:
+
+   class DemoController < ActionController::Metal
+
+      def index
+
+         self.response_body = "Hello World!"
+
+      end   
+
+   end
+
+ - Xong thêm code sau vào config/routes.rb:
+
+   get "demo" => "demo#index"
+
+ - Xong truy  cập vào localhost:3000/demo Web sẽ hiển thị “Hello World!”.
+
+Parameters
+
+ Rails thu thập tham số từ 3 vị trí:
+
+
+ - Đường dẫn (the path)
+
+ - Truy vấn (the query)
+
+ - Thân (the body)
+
+ Tất cả chúng đều được hợp nhất và cung cấp thông qua phương thức params dưới dạng một thể hiện của ActionController::Parameters.
+
+ Tham số Query được thiết lập bằng cách gửi một biểu mẫu HTML với yêu cầu GET
+
+ Tham số Body được thiết lập bằng cách gửi biểu mẫu qua POST và các phương thức khác vì chúng được giả lập bởi một yêu cầu POST.
+
+ Tham số cũng có thể được cung cấp bởi một request gửi qua JavaScript hoặc một client API.
+
+ Trong biểu mẫu (forms), danh sách các tham số là một danh sách phẳng của các cặp khóa/giá trị (key/value pairs):
+
+   a=12&b=text&c=Hello
+
+ Rails sẽ cung cấp cho chúng ta các tham số tương đương với hash sau:
+
+   {"a"=>"12", "b"=>"text", "c"=>"Hello"}
+
+ Rails hiện áp dụng hai quy tắc bổ sung để cho phép mảng và hash. Để đánh dấu một tham số là một mảng, đặt tham số trong “[]” , bằng cách này có thể mô tả mục bằng nhiều tham số 
+
+   countries[]=AT&countries[]=CH&countries[]=DE
+
+ tương đương với:
+
+   {"countries"=>["AT", "CH", "DE"]}
+
+ Quy tắc còn lại là 1 tham số được mô tả bằng 1 hash gồm nhiều tham số 
+
+   person[name]=obie&person[occupation]=dj
+
+ tương đương với:
+
+   {"person"=>{"name"=>"obie", "occupation"=>"dj"}}
+
+Strong parameters
+
+ Là các tham số được cung cấp dưới dạng một thể hiện của ActionController::Parameters có thuộc tính permitted được đặt là false
+
+   params = ActionController::Parameters.new(
+      person: {
+         name: "obie",
+         occupation: "dj"
+      }
+   )
+
+ #=> <ActionController::Parameters{"person"=>{
+ # "name"=>"obie","occupation"=>"dj"}} permitted: false>
+
+ Để ngăn chặn người dùng đặt bất kỳ tham số nào họ muốn (ví dụ: tự thăng cấp lên vai trò quản trị viên), việc cung cấp một unpermitted cho một lần gán hàng loạt của một mô hình ActiveRecord sẽ gây ra một ngoại lệ:
+
+   Person.new(params)
+
+   #=> Exception raised: ActiveModel::ForbiddenAttributesError
+
+ Bạn có hai lựa chọn: handpick hoặc permit attributes
+
+Render onto View…
+
+ Mục tiêu của hành động controller điển hình trong một ứng dụng web truyền thống là để render một view template — tức là, điền vào template và giao kết quả, thường là một tài liệu HTML, lại cho máy chủ để chuyển đến trình duyệt.
+
+
+ Trong app/views/demo/index.html.erb thêm mã sau:
+
+   Hello World!
+
+ Sau đó yêu cầu controller render template đó:
+
+   class DemoController < ApplicationController
+
+      def index
+
+         render "demo/index"
+
+      end
+
+   end
+
+ So sánh với ví dụ (A) ta thấy DemoController không còn kế thừa từ ActionController::Metal mà từ ApplicationController vì render là một tính năng được cung cấp bởi ActionController::Base. Nếu bạn truy cập lại trang, bạn vẫn sẽ được chào đón với “Hello World!”.
+
+When in Doubt, Render
+
+ Ở cuối mỗi hành động của controller, nếu không có gì khác được chỉ định, hành vi mặc định là render template có tên khớp với tên của controller và action, trong trường hợp này nghĩa là app/views/demo/index.html.erb. Vì vậy, hãy thử mã sau:
+
+   class DemoController < ApplicationController
+
+      def index
+
+      end
+
+   end
+
+ không cần phải gọi render rõ ràng, vì Rails giả định đó là điều bạn muốn.
+
+ Nói cách khác, mỗi hành động controller có một lệnh render ngầm trong đó.
+
+ Vào app/controller/demo_controller.rb, và xóa hành động index để file trông trống rỗng, như sau:
+
+   class DemoController < ApplicationController
+
+   end
+
+ Rails biết rằng khi nó nhận được một yêu cầu cho hành động index của demo controller, điều thực sự quan trọng là gửi lại điều gì đó cho máy chủ. Vì vậy, nếu không có hành động index trong file controller, Rails chỉ đơn giản cho rằng, “Chà, hãy giả định rằng nếu có một hành động index, nó cũng sẽ trống thôi, và tôi chỉ cần render index.html.erb. Vậy đó là điều tôi sẽ làm.”
+
+Render Template của Hành Động Khác
+
+ Một lý do phổ biến để render một template hoàn toàn khác là để hiển thị lại một form, khi nó được gửi với dữ liệu không hợp lệ và cần phải chỉnh sửa. Trong những trường hợp như vậy, chiến lược web thông thường là hiển thị lại form với dữ liệu đã gửi và đồng thời hiển thị một số thông tin lỗi, để người dùng có thể chỉnh sửa form và gửi lại.
+
+ Lý do quá trình này liên quan đến việc render một template khác là vì hành động xử lý form và hành động hiển thị form thường là — khác nhau. Do đó, hành động xử lý form cần một cách để hiển thị lại template gốc (form), thay vì coi việc gửi form là thành công và chuyển sang màn hình tiếp theo.
+
+   class EventController < ActionController::Base
+
+      def new
+
+      end
+
+      def create
+
+         @event = Event.new(params[:event])
+
+         if @event.save
+
+            redirect_to dashboard_path, notice: "Event created!"
+
+         else
+
+            render action: 'new' 
+
+         end
+
+      end
+
+   end
+
+ Giải thích :
+
+ - Phương thức new chỉ đơn giản là render ra template new.html.erb mà không có xử lý logic nào khác. Template này thường chứa biểu mẫu để người dùng nhập thông tin về sự kiện mới.
+ - Phương thức create xử lý dữ liệu từ biểu mẫu nhập liệu (new.html.erb). Dữ liệu nhập vào từ người dùng được lưu trong params, và thông tin của sự kiện mới được khởi tạo thông qua Event.new(params[:event]).
+ - Nếu sự kiện được lưu thành công (@event.save trả về true), người dùng sẽ được chuyển hướng đến dashboard_path và hiển thị thông báo "Event created!".
+ - Nếu không thành công (@event.save trả về false), phương thức render sẽ render lại action new. Điều này cho phép hiển thị lại biểu mẫu với thông báo lỗi hoặc trạng thái trước đó mà không cần gọi lại phương thức new.
+
+ Lưu ý rằng template tự nó không “biết” rằng nó đã được render bởi hành động create thay vì hành động new. Nó chỉ làm công việc của nó: Nó điền, mở rộng và chèn, dựa trên các hướng dẫn nó chứa và dữ liệu (trong trường hợp này là @event) mà controller đã truyền cho nó.
+
+Render Một Template Hoàn Toàn Khác
+
+ Tương tự như vậy, nếu bạn muốn render một template cho một hành động khác, bạn có thể render bất kỳ template nào trong ứng dụng của bạn bằng cách gọi phương thức render với một chuỗi chỉ đến tệp template mong muốn.
+
+   render template: "/products/index.html.erb"
+
+ Trong những trường hợp hiếm, bạn có thể sử dụng phương thức render để truy cập vào các template hoàn toàn nằm ngoài ứng dụng của bạn bằng cách sử dụng :file 
+
+   render file: "/u/apps/warehouse_app/current/app/views/products/show"
+
+Rendering a Partial Template: render 1 phần giao diên người dùng
+
+ sử dụng tùy chọn :partial
+
+   render partial: "product"
+
+ Trong Rails, partials là các file view nhỏ được sử dụng để tái sử dụng các phần giao diện giống nhau trong các trang khác nhau của ứng dụng. Khi gọi render partial: "product", Rails sẽ tìm và render nội dung từ file _product.html.erb trong thư mục app/views/products/.
+
+Rendering HTML
+
+ sử dụng tùy chọn :html
+
+   render html: "<strong>Not Found</strong>".html_safe
+
+Rendering Inline Template Code
+
+ sử dụng tùy chọn inline:
+
+   render inline: "%span.foo #{@foo.name}", type: "haml"
+
+Rendering Text
+
+ sử dụng tùy chọn plain:
+
+   render plain: "Submission accepted"
+
+Rendering raw body output
+
+ sử dụng tùy chọn body:
+
+   render body: "Something very raw"
+
+Rendering Other Types of Structured Data
+
+ :json
+
+   render json: @record
+
+ :xml
+
+   render xml: @record
+
+Chính sách mặc định của việc render
+
+ Trong mọi trường hợp, nếu Rails không thể tìm thấy template để render, hãy nhớ rằng nó sẽ phản hồi yêu cầu với "204 No Content". Điều khó khăn với mã trạng thái này là nhiều trình duyệt sẽ đơn giản bỏ qua nó và không làm gì cả. Nếu bạn không để ý đến những gì đang xảy ra (đặc biệt là trên cửa sổ console của Rails), bạn có thể nghĩ rằng trang trước đã được render lại, đặc biệt là nếu nó chứa một thông báo hoặc mã trạng thái lỗi.
+
+Rendering Options
+
+ :content_type
+
+ Options định dạng nội dung
+
+ :layout
+
+ Options cho phép chọn layout render ra
+
+ :status
+
+ Giao thức HTTP bao gồm nhiều mã trạng thái tiêu chuẩn chỉ ra nhiều điều kiện khác nhau trong phản hồi của máy chủ đối với yêu cầu của khách hàng. Rails sẽ tự động sử dụng trạng thái phù hợp cho hầu hết các trường hợp thông thường, chẳng hạn như 200 OK cho một yêu cầu thành công.
+
+Additional Layout Options
+
+ có thể chỉ định các tùy chọn layout ở cấp lớp controller nếu bạn muốn tái sử dụng các layout cho nhiều hành động khác nhau.
+
+   class EventController < ActionController::Base
+
+      layout "events", only: [:index, :new]
+
+      layout "global", except: [:index, :new]
+
+   end
+
+ Phương thức layout có thể chấp nhận một chuỗi (String), ký hiệu (Symbol), hoặc Boolean (kiểu dữ liệu biểu diễn hai giá trị: đúng (true) và sai (false)), kèm theo một hash các đối số.
+
+Redirecting
+
+ Vòng đời của một ứng dụng Rails được chia thành các yêu cầu. Việc render một template, dù là template mặc định hay một template thay thế, hoặc render một partial hay một đoạn văn bản nào đó, là bước cuối cùng trong việc xử lý một yêu cầu. Tuy nhiên, việc chuyển hướng (redirect) có nghĩa là kết thúc yêu cầu hiện tại và yêu cầu khách hàng khởi tạo một yêu cầu mới
+
+ Hãy xem ví dụ về phương thức xử lý form create sau đây:
+
+   def create
+
+      if @event.save
+
+         redirect_to :index, notice: "Event created!"
+
+      else
+
+         render :new
+
+      end
+
+   end
+
+ if @event.save: Kiểm tra xem việc lưu đối tượng @event vào cơ sở dữ liệu có thành công hay không.
+
+ redirect_to, notice: "Event created!": Nếu việc lưu thành công, chuyển hướng đến hành động index và hiển thị thông báo "Sự kiện đã được tạo!".
+
+ Trong trường hợp này, đó là hành động index. Logic ở đây là nếu bản ghi Event mới được lưu, bước tiếp theo là đưa người dùng trở lại top-level view
+
+ Lý do chính để chuyển hướng thay vì chỉ render một template sau khi tạo hoặc chỉnh sửa một tài nguyên (thực sự là một hành động POST) liên quan đến hành vi tải lại của trình duyệt. Nếu bạn không chuyển hướng, người dùng sẽ được nhắc nhở để nộp lại biểu mẫu nếu họ nhấn nút quay lại hoặc tải lại trang.
+
+ Phương thức redirect_to nhận hai tham số:
+
+   redirect_to(target, response_status = {})
+
+ Tham số target có thể nhận một trong các dạng sau:
+
+ - Hash: URL sẽ được tạo bằng cách gọi url_for với đối số được cung cấp.
+ - Đối tượng Active Record: URL sẽ được tạo bằng cách gọi url_for với đối tượng được cung cấp, đối tượng này nên tạo một URL có tên cho bản ghi đó.
+ - Chuỗi bắt đầu bằng giao thức như http://: Được sử dụng trực tiếp làm URL đích để chuyển hướng.
+ - Chuỗi không chứa giao thức: Giao thức và host hiện tại được thêm vào trước đối số và được sử dụng cho việc chuyển hướng.
+ - Proc: Một proc sẽ được thực thi trong ngữ cảnh của controller. Proc này nên trả về bất kỳ lựa chọn mục tiêu nào ở trên.
+
+Phương thức redirect_back
+
+ Bạn có thể sử dụng phương thức redirect_back để chuyển hướng người dùng quay lại trang mà họ vừa đến từ, một kỹ thuật rất hữu ích trong các ứng dụng web truyền thống. Địa chỉ để "quay lại" được lấy từ tiêu đề HTTP_REFERER. Vì không đảm bảo rằng nó sẽ được thiết lập bởi trình duyệt, bạn phải cung cấp tham số fallback_location như một giá trị mặc định khi không có địa chỉ trước đó.
+
+   redirect_back fallback_location: root_path
+
+ Mặc định, phương thức redirect_back cho phép chuyển hướng đến một máy chủ khác. Tuy nhiên, bạn có thể ngăn chặn điều này bằng cách thiết lập tùy chọn allow_other_host thành false.
+
+   redirect_back fallback_location: root_path, allow_other_host: false
+
+ Điều này sẽ chỉ cho phép chuyển hướng quay lại cùng một máy chủ mà không chuyển đến các máy chủ khác.
+
+Controller/View Communication
+
+ Khi một template view được render, thường nó sẽ sử dụng dữ liệu mà controller đã lấy từ cơ sở dữ liệu. Nói cách khác, controller nhận những gì nó cần từ tầng model và chuyển giao cho view.
+
+ Rails thực hiện việc truyền dữ liệu từ controller tới view thông qua các biến instance. Thông thường, một hành động của controller khởi tạo một hoặc nhiều biến instance. Những biến instance đó sau đó có thể được sử dụng bởi view. Điều này được thực hiện thông qua hash assigns được cung cấp cho view khi khởi tạo.
+
+ assigns hash là một biến instance trong controller được sử dụng để lưu trữ các giá trị mà bạn muốn truyền từ controller tới view. Đây là một phần của cơ chế kết hợp giữa controller và view trong Rails để truyền dữ liệu từ phía server (controller) sang phía client (view).
+
+ Cách hoạt động của assigns hash:
+
+ Định nghĩa và gán giá trị: Trên controller, bạn có thể gán các giá trị cho assigns thông qua các biến instance. Ví dụ:
+
+   class PostsController < ApplicationController
+
+      def show
+
+
+         @post = Post.find(params[:id])
+
+
+         @comments = @post.comments
+
+
+         @tags = @post.tags
+
+      # Các giá trị này sẽ được tự động lưu vào assigns hash
+
+      end
+
+   end
+
+ Truyền dữ liệu cho view: Khi một view được render, Rails sẽ tự động chuyển assigns hash vào phạm vi của view template. Điều này cho phép bạn truy cập các giá trị này từ view một cách dễ dàng.
+
+ Ví dụ, trong view show.html.erb:
+
+   <h1><%= @post.title %></h1>
+
+   <h2>Comments:</h2>
+
+   <% @comments.each do |comment| %>
+
+   <p><%= comment.body %></p>
+
+   <% end %>
+
+   <h2>Tags:</h2>
+
+   <% @tags.each do |tag| %>
+
+   <span><%= tag.name %></span>
+
+   <% end %>
+
+ Trong đoạn mã này, @post, @comments, và @tags đều được truy cập thông qua assigns hash.
+
+ Tính chất của assigns: assigns là một hash bao gồm các cặp key-value, trong đó key là tên biến instance (có thể là symbol hoặc string) và value là giá trị của biến instance đó. Rails tự động tạo và quản lý assigns trong quá trình xử lý một request và gửi dữ liệu này sang view tương ứng.
+
+ Gem "Decent Exposure" trong Rails là một thư viện giúp đơn giản hóa việc xử lý dữ liệu (data handling) trong các controller của ứng dụng Rails. Thư viện này được sử dụng để giảm thiểu việc lặp lại code và tăng tính tổ chức của mã nguồn bằng cách tự động tạo ra các phương thức truy cập dữ liệu cho các biến instance trong controller.
+
+ Các tính năng chính của Decent Exposure:
+
+ - Tự động tạo các phương thức truy cập: Decent Exposure cho phép bạn định nghĩa các biến instance trong controller mà không cần viết nhiều code. Thay vì phải viết từng getter và setter cho từng biến instance, bạn chỉ cần định nghĩa một lần và Decent Exposure sẽ tự động tạo ra các phương thức truy cập tương ứng.
+
+ - Tăng tính mạnh mẽ và bảo mật: Thay vì trực tiếp sử dụng biến instance, Decent Exposure thúc đẩy việc sử dụng các phương thức để truy cập và thay đổi dữ liệu, giúp tăng tính bảo mật và quản lý dữ liệu.
+
+ - Hỗ trợ cấu hình linh hoạt: Decent Exposure cho phép bạn tùy chỉnh cách thức hoạt động thông qua các tùy chọn cấu hình, cho phép bạn điều chỉnh hành vi mặc định của gem theo yêu cầu cụ thể của ứng dụng.
+
+Action Callbacks
+
+ Các action callbacks cho phép các controller chạy mã xử lý chung trước và sau khi thực hiện các hành động của họ. Những callback này có thể được sử dụng để thực hiện xác thực, caching hoặc kiểm định trước khi hành động dự định được thực hiện. Các khai báo callback là các phương thức lớp kiểu macro, tức là chúng xuất hiện ở đầu phương thức của controller, trong ngữ cảnh lớp, trước định nghĩa của phương thức. Vi du
+
+   before_action :require_authentication
+
+Streaming
+
+ là khả năng hỗ trợ gửi nội dung về cho client yêu cầu một cách liên tục (streaming), thay vì đợi cho đến khi toàn bộ nội dung được hoàn thành mới gửi đi. Điều này giúp cải thiện hiệu suất và trải nghiệm người dùng trong các trường hợp cần xử lý và truyền tải dữ liệu lớn hoặc dữ liệu đang được sinh ra theo thời gian thực.
+
+Streaming Templates 
+
+ Mặc định, khi một view được render trong Rails, nó trước tiên render template và sau đó là layout của view. Khi trả về một response cho client, tất cả các truy vấn Active Record cần thiết được thực thi và toàn bộ template được render một lần duy nhất.
+
+ Tuy nhiên, Rails cũng hỗ trợ streaming các view đến client. Điều này cho phép các view được render và truyền dần dần khi chúng được xử lý, bao gồm chỉ thực thi các truy vấn Active Record cụ thể khi chúng cần thiết. Để làm được điều này, Rails đảo ngược thứ tự render bình thường. Layout được render trước thay vì sau, sau đó từng phần của template được xử lý.
+
+ Để kích hoạt streaming view, bạn có thể truyền tuỳ chọn stream vào phương thức render
+
+   class EventController < ActionController::Base
+
+      def index
+
+         @events = Events.all
+
+         render stream: true
+
+      end
+
+   end
+
+ Rails cũng hỗ trợ gửi các bộ đệm (buffers) và tập tin bằng hai phương thức trong module ActionController::DataStreaming: send_data và send_file.
+
+The respond_to Method
+
+ Trong HTTP, định dạng của phản hồi được thương lượng giữa máy khách và máy chủ. Máy khách cung cấp cho máy chủ một danh sách các định dạng mà nó hiểu được theo độ ưu tiên thông qua tiêu đề Accept. Sau đó, máy chủ chọn một định dạng từ danh sách được cung cấp hoặc từ chối yêu cầu. Trong lệnh curl, chúng ta có thể thiết lập một tiêu đề yêu cầu bằng tùy chọn -H:
+
+   $ curl http://localhost:3000/auctions/1 -H "Accept: application/json" -v
+
+   GET /auctions/1 HTTP/1.1
+
+   Host: localhost:3000
+
+   User-Agent: curl/7.58.0
+
+   Accept: application/json
+
+ Điều này cho biết với máy chủ của chúng ta rằng máy khách chỉ chấp nhận JSON.
+
+   $ curl http://localhost:3000/auctions/1.json -v
+
+   GET /auctions/1 HTTP/1.1
+
+   Host: localhost:3000
+
+   User-Agent: curl/7.58.0
+
+   Accept: */*
+
+ */* Accept header chấp nhận bất kỳ định dạng nào.
+
+ Trong Rails, controller có trách nhiệm phản ứng với định dạng yêu cầu từ phía máy khách. Phương thức respond_to cho phép bạn viết các hành động của mình sao cho nó sẽ trả về kết quả khác nhau dựa trên định dạng yêu cầu từ máy khách. Dưới đây là một ví dụ về hành động show cho controller products, cung cấp cả HTML và JSON:
+
+   def show
+
+      @auction = Auction.find(params[:id])
+
+      respond_to do |format|
+
+         format.html
+
+         format.json { render json: @auction.to_json }
+
+      end
+
+   end
+
+ Khối respond_to trong ví dụ này có hai điều kiện. Điều kiện HTML đơn giản chỉ có format.html. Yêu cầu cho HTML sẽ được xử lý bằng cách hiển thị một view template như thường lệ. Điều kiện JSON bao gồm một khối mã; nếu yêu cầu JSON, khối mã sẽ được thực thi và kết quả của nó sẽ được trả về cho máy khách.
+
+ Nếu yêu cầu một định dạng mà không được định nghĩa trong khối respond_to, Rails sẽ không sinh ra một ngoại lệ. Thay vào đó, nó sẽ trả về mã trạng thái 406 Not Acceptable, để chỉ ra rằng nó không thể xử lý yêu cầu.
+
+ Nếu bạn muốn thiết lập một điều kiện else cho khối respond_to của mình, bạn có thể sử dụng phương thức any, cho Rails biết để bắt các định dạng khác không được định nghĩa một cách rõ ràng:
+
+   def show
+
+      @product = Product.find(params[:id])
+
+      respond_to do |format|
+
+         format.html
+
+         format.json { render json: @product.to_json }
+
+         format.any
+
+      end
+
+   end
+
+ Hãy chắc chắn rằng bạn đã chỉ định rõ ràng cho any cách xử lý yêu cầu hoặc có các view template tương ứng với các định dạng bạn mong đợi. Nếu không, bạn sẽ nhận được một ngoại lệ MissingTemplate.
+
+   ActionView::MissingTemplate (Missing template products/show,
+
+      application/show with {:locale=>[:en], :formats=>[:xml],
+
+      :handlers=>[:erb, :builder, :raw, :ruby, :jbuilder, :coffee]}.)
+
+Variants
+
+ Variants là một tính năng trong Rails cho phép render các template HTML, JSON, và XML khác nhau dựa trên một số tiêu chí nhất định.
+
