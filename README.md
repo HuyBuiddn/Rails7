@@ -1596,3 +1596,174 @@ Variants
 
  Variants là một tính năng trong Rails cho phép render các template HTML, JSON, và XML khác nhau dựa trên một số tiêu chí nhất định.
 
+Chapter 5
+
+Cookies
+
+ Cookie là một mẩu thông tin mà máy chủ yêu cầu trình duyệt lưu trữ. Từ thời điểm đó, trình duyệt sẽ bao gồm cookie trong mọi yêu cầu nó gửi đến máy chủ. Chúng ta có thể sử dụng cookies để lưu trữ các tùy chọn của người dùng, chẳng hạn. Hãy lưu ý rằng cookies sẽ làm tăng kích thước của mỗi yêu cầu đến máy chủ của bạn.
+
+ Bộ chứa cookie, như được biết đến, trông giống như một hash. Bạn có thể truy cập nó thông qua phương thức cookies trong phạm vi của các controller, view template và helper.
+
+ Lưu ý rằng cookie được đọc theo giá trị, vì vậy bạn sẽ không nhận lại đối tượng cookie mà chỉ là giá trị nó giữ dưới dạng chuỗi (hoặc dưới dạng một mảng chuỗi nếu nó giữ nhiều giá trị).
+
+ Để tạo hoặc cập nhật cookies, bạn gán giá trị sử dụng toán tử dấu ngoặc vuông. Bạn có thể gán một giá trị chuỗi đơn hoặc một hash chứa các tùy chọn. 
+
+ Chúng ta có thể ghi cookie như sau:
+
+  cookies[:list_mode] = "false"
+
+ Chúng ta có thể đọc cookie như sau:
+
+  cookies[:list_mode] # "false"
+
+ Chúng ta cũng có thể xóa một cookie:
+
+  cookies.delete(:list_mode)
+
+ Một cookie có thời gian sống mặc định là "session". Thời gian sống của "session" được định nghĩa bởi trình duyệt, nhưng trong hầu hết các trường hợp, cookie này được lưu trữ cho đến khi bạn thoát trình duyệt. Nếu bạn muốn giữ nó lâu hơn, bạn có thể đặt thuộc tính "Expires". Trong Rails, chúng ta sử dụng tùy chọn expires, nhận một số giây làm đối số, để xác định khi nào cookie nên bị xóa bởi trình duyệt. 
+
+  cookies[:recheck] = { value: "false", expires: 5.minutes.from_now }
+
+ Bạn cũng có thể đặt nó thành một timestamp:
+
+  cookies[:contact] = { value: "false", expires: Time.utc(2063, 4, 5) }
+
+ Một trường hợp sử dụng phổ biến là đặt một cookie "vĩnh viễn". Vì điều này không phải là một phần của tiêu chuẩn HTTP, Rails định nghĩa vĩnh viễn là "20 năm". Bạn có thể đặt một cookie "permanent" như sau:
+
+  cookies.permanent[:answer] = "42"
+
+ Mỗi cookie đều có một phạm vi. Phạm vi bao gồm hai thuộc tính: domain và path.
+
+ Theo mặc định, thuộc tính domain là nil. Điều này báo hiệu cho trình duyệt rằng cookie chỉ nên được gửi đến chính xác tên miền mà nó xuất phát từ đó, cụ thể là không bao gồm các tên miền con.
+
+ Nếu bạn đặt tùy chọn :domain thành :all cookie sẽ được gửi cho các yêu cầu đối với tên miền và tất cả các tên miền con của nó
+
+  cookies[:login] = {
+
+    value: @user.security_token,
+
+    domain: :all
+
+  }
+
+ Tuỳ chọn :path rất hữu ích vì nó cho phép bạn đặt các tùy chọn cụ thể cho các phần cụ thể hoặc thậm chí các bản ghi cụ thể của ứng dụng của bạn. Đường dẫn mô tả một tiền tố, vì vậy /ideas cũng áp dụng cho /ideas/1. Nó mặc định là /, do đó khớp với tất cả các đường dẫn.
+
+ Cookie cũng có thuộc tính SameSite. Nó có ba giá trị khả thi:
+
+ - Strict: Cookie chỉ được gửi đến cùng tên miền mà nó xuất phát từ đó.
+ - Lax: Tương tự, ngoại trừ khi người dùng điều hướng đến một URL từ một trang web bên ngoài, chẳng hạn như khi theo dõi một liên kết.
+ - None: Không có hạn chế về các yêu cầu chéo trang web.
+
+Cookie Access
+
+ Chúng ta có thể hạn chế thêm quyền truy cập vào cookie:
+
+  cookies[:account_number] = { value: @account.number, secure: true, httponly: true }
+
+ với tuỳ chọn :httponly được đặt là true (mặc định là false), cookie sẽ không thể truy cập từ JavaScript.
+
+ Với tuỳ chọn :secure được đặt là true, cookie chỉ được truyền qua kết nối HTTPS. Mặc định phụ thuộc vào cấu hình force_ssl của bạn: Nếu bạn bắt buộc sử dụng HTTPS, Rails cũng sẽ mặc định sử dụng cookie bảo mật. Mặc định điều này có nghĩa là bạn có :secure được bật trong môi trường production, nhưng không phải trong môi trường development hoặc testing.
+
+Signed and Encrypted Cookies
+
+ Vì cookie được lưu trữ trong trình duyệt của người dùng, họ có thể đọc và thay đổi nó. Điều này có thể chấp nhận được đối với một số cookie. Đối với các cookie khác (như cookie phiên làm việc mà chúng ta sẽ tìm hiểu tiếp theo), điều này có thể không ổn.
+
+ Nếu bạn muốn người dùng có thể đọc cookie nhưng không thể thay đổi nó, bạn có thể sử dụng signed cookie:
+
+  cookies.signed[:user_id] = current_user.id
+
+ Nếu người dùng thay đổi giá trị của cookie, Rails sẽ kiểm tra chữ ký và loại bỏ cookie. Tuy nhiên, vẫn có thể đọc cookie ở phía client. Điều này có thể hữu ích nếu bạn muốn một client JavaScript đọc cookie nhưng không thể sửa đổi nó. Nó hữu ích để bảo vệ thông tin nhạy cảm khỏi bị thay đổi mà không cần mã hóa.
+
+ Nếu bạn muốn đảm bảo rằng cookie không thể đọc hoặc thay đổi, bạn có thể mã hóa nó:
+
+  cookies.encrypted[:user_id] = current_user.id
+
+Session
+
+ Bất cứ khi nào một người dùng mới truy cập vào ứng dụng Rails của chúng ta, một phiên làm việc mới sẽ được tự động tạo. Sử dụng phiên này, chúng ta có thể duy trì một lượng trạng thái phía máy chủ đủ để làm cho lập trình web trở nên dễ dàng hơn đáng kể.
+
+Accessing the Session
+
+ API của phiên làm việc là một tập con của API Hash:
+
+ # write to the session
+
+  session[:current_user] = "Bob"
+
+ # read from the session
+
+  session[:current_user] # "Bob"
+
+ # delete a key
+
+  session.delete(:current_user) # "Bob"
+
+ Ngoài ra, bạn có thể sử dụng phương thức reset_session được định nghĩa trong ActionController::Metal để đặt lại phiên làm việc:
+
+  reset_session
+
+Storage Mechanisms
+
+ Phiên làm việc được xác định bởi một session id duy nhất, một chuỗi 32 ký tự của các số hex ngẫu nhiên. Bất kể cơ chế lưu trữ được chọn là gì, session id này được lưu trữ trong một cookie. Như đã giải thích trong phần về cookie bảo mật, tất cả các cookie được đặt thành bảo mật khi bạn bật force_ssl. Hơn nữa, cookie phiên làm việc mặc định là httponly. Bạn có thể truy cập session id như sau:
+
+  session[:session_id]
+
+Cache Store
+
+ Tùy chọn lưu trữ phiên cache cho phép bạn sử dụng bất kỳ cái gì bạn đã cấu hình làm bộ nhớ cache làm kho dữ liệu phiên. Ngoài việc dễ dàng để cấu hình và vận hành, điều này cũng rất tiện lợi vì nó tích hợp sẵn hết hạn, có nghĩa là bạn không cần phải tự động hết hạn các phiên cũ.
+
+ Để cấu hình nó, hãy tạo một tập tin khởi tạo trong config/initializers session_store.rb:
+
+  Rails.application.config.
+
+    session_store ActionDispatch::Session::CacheStore
+
+ Hoặc, để cấu hình nó khác nhau cho mỗi môi trường, đặt nó trong tệp cấu hình tương ứng trong config/environments:
+
+  config.session_store ActionDispatch::Session::CacheStore
+
+The Flash
+
+ sử dụng flash[:notice] để lưu trữ các thông báo thông thường và flash[:alert] để truyền thông tin quan trọng hơn. Những thông điệp này sau đó được hiển thị ở một phần nổi bật trên HTML được render.
+
+ Rails cho phép bạn thiết lập chúng như các tham số tùy chọn trong phương thức redirect_to:
+
+  def create
+
+    if user.try(:authorize, params[:user][:password])
+
+      redirect_to home_url, notice: "Welcome, #{user.first_name}!"
+
+    else
+
+      redirect_to :new, alert: "Login invalid."
+
+    end
+
+  end
+
+ Đôi khi bạn muốn hiển thị một thông báo flash cho người dùng nhưng chỉ trong yêu cầu hiện tại. Thực tế, một lỗi lập trình phổ biến của các lập trình viên mới vào Rails là đặt thông báo flash mà không chuyển hướng, dẫn đến hiển thị thông báo flash sai trong yêu cầu tiếp theo.
+
+ Để làm cho flash hoạt động cùng với lệnh render, bạn có thể sử dụng phương thức flash.now
+
+  class ReportController < ActionController::Base
+
+    def create
+
+      if report.save
+
+        redirect_to report_path(report), notice: "#{report.title} has been created."
+
+      else
+
+        flash.now.alert = "#{report.title} could not be created."
+
+        render :new
+
+      end
+
+    end
+
+  end
+
+ Đối tượng flash.now cũng có các truy cập vào notice và alert, tương tự như đối tượng flash truyền thống của nó. Phương thức flash.now được sử dụng để hiển thị thông báo flash ngay trong quá trình render hiện tại, thay vì chờ cho đến khi chuyển hướng đến yêu cầu tiếp theo.
